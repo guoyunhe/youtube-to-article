@@ -18,7 +18,7 @@ type ThemePreference = 'light' | 'dark' | 'system'
 type ResolvedTheme = 'light' | 'dark'
 
 const LANGUAGE_OPTIONS = [
-  { label: 'EN', value: 'en' },
+  { label: 'English', value: 'en' },
   { label: '中文', value: 'zh' },
 ] as const
 
@@ -49,52 +49,34 @@ export function AppTopBar({
 
   return (
     <AppBar
-      elevation={0}
       position="sticky"
+      color="inherit"
       sx={{
         backdropFilter: 'blur(18px)',
-        backgroundColor: 'color-mix(in srgb, var(--color-card-soft) 78%, transparent)',
         borderBottom: '1px solid var(--color-border)',
-        color: 'var(--color-text)',
       }}
     >
-      <Toolbar
-        sx={{
-          alignItems: { sm: 'center' },
-          display: 'flex',
-          flexDirection: { sm: 'row', xs: 'column' },
-          gap: 2,
-          justifyContent: 'space-between',
-        }}
-      >
+      <Toolbar sx={{ }}>
         <Box sx={{ minWidth: 0 }}>
           <Typography
             component={Link}
             sx={{
-              color: 'inherit',
-              fontSize: '1.5rem',
+              fontSize: '1.2rem',
               fontWeight: 700,
-              letterSpacing: '-0.02em',
-              textDecoration: 'none',
             }}
             to="/"
           >
             {t('appName')}
           </Typography>
-          <Typography sx={{ color: 'var(--color-text-muted)', fontSize: 14, mt: 0.25 }}>
-            {t('tagline')}
-          </Typography>
         </Box>
+
+        <Box sx={{ flexGrow: 1 }} />
 
         <Box sx={{ alignItems: 'center', display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
           {location.pathname !== '/' ? (
             <Button
-              sx={{
-                borderColor: 'var(--color-border)',
-                color: 'var(--color-text)',
-                textTransform: 'none',
-              }}
-              variant="outlined"
+              variant="text"
+              color="inherit"
               onClick={() => navigate('/')}
             >
               {t('actions.backHome')}
@@ -106,8 +88,8 @@ export function AppTopBar({
             aria-expanded={themeMenuAnchorEl ? 'true' : undefined}
             endIcon={<ArrowDropDownIcon />}
             startIcon={themeIcon}
-            sx={{ color: 'var(--color-text)', textTransform: 'none' }}
-            variant="outlined"
+            variant="text"
+            color="inherit"
             onClick={(event) => setThemeMenuAnchorEl(event.currentTarget)}
           >
             {t(`theme.${themePreference}`)}
@@ -116,15 +98,6 @@ export function AppTopBar({
             anchorEl={themeMenuAnchorEl}
             open={Boolean(themeMenuAnchorEl)}
             onClose={() => setThemeMenuAnchorEl(null)}
-            slotProps={{
-              paper: {
-                sx: {
-                  backdropFilter: 'blur(20px)',
-                  backgroundColor: 'color-mix(in srgb, var(--color-card) 82%, transparent)',
-                  border: '1px solid var(--color-border)',
-                },
-              },
-            }}
           >
             {(['light', 'dark', 'system'] as ThemePreference[]).map((theme) => (
               <MenuItem
@@ -144,8 +117,8 @@ export function AppTopBar({
             aria-haspopup="menu"
             aria-expanded={languageMenuAnchorEl ? 'true' : undefined}
             endIcon={<ArrowDropDownIcon />}
-            sx={{ color: 'var(--color-text)', textTransform: 'none' }}
-            variant="outlined"
+            variant="text"
+            color="inherit"
             onClick={(event) => setLanguageMenuAnchorEl(event.currentTarget)}
           >
             {LANGUAGE_OPTIONS.find((option) => option.value === currentLanguage)?.label ?? 'EN'}
@@ -154,15 +127,6 @@ export function AppTopBar({
             anchorEl={languageMenuAnchorEl}
             open={Boolean(languageMenuAnchorEl)}
             onClose={() => setLanguageMenuAnchorEl(null)}
-            slotProps={{
-              paper: {
-                sx: {
-                  backdropFilter: 'blur(20px)',
-                  backgroundColor: 'color-mix(in srgb, var(--color-card) 82%, transparent)',
-                  border: '1px solid var(--color-border)',
-                },
-              },
-            }}
           >
             {LANGUAGE_OPTIONS.map((option) => (
               <MenuItem
