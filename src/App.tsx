@@ -1,4 +1,4 @@
-import { Button, Card } from '@heroui/react'
+import { Button, Card, Tabs } from '@heroui/react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
@@ -45,19 +45,20 @@ function LanguageSwitcher() {
   const currentLanguage = normalizeLanguage(i18n.resolvedLanguage ?? i18n.language)
 
   return (
-    <div className="flex items-center gap-2 text-sm">
-      {(['en', 'zh'] as const).map((language) => (
-        <Button
-          key={language}
-          className="min-w-14"
-          size="sm"
-          variant={currentLanguage === language ? 'primary' : 'outline'}
-          onPress={() => void i18n.changeLanguage(language)}
-        >
-          {language === 'en' ? 'EN' : '中文'}
-        </Button>
-      ))}
-    </div>
+    <Tabs
+      aria-label="Language options"
+      className="w-auto"
+      selectedKey={currentLanguage}
+      variant="primary"
+      onSelectionChange={(key) => void i18n.changeLanguage(String(key))}
+    >
+      <Tabs.ListContainer>
+        <Tabs.List aria-label="Language options">
+          <Tabs.Tab id="en">EN</Tabs.Tab>
+          <Tabs.Tab id="zh">中文</Tabs.Tab>
+        </Tabs.List>
+      </Tabs.ListContainer>
+    </Tabs>
   )
 }
 
@@ -171,11 +172,11 @@ function AppShell() {
                   {t('actions.backHome')}
                 </Button>
               ) : null}
-                <ThemeSwitcher
-                  resolvedTheme={resolvedTheme}
-                  themePreference={themePreference}
-                  onChange={setThemePreference}
-                />
+              <ThemeSwitcher
+                resolvedTheme={resolvedTheme}
+                themePreference={themePreference}
+                onChange={setThemePreference}
+              />
               <LanguageSwitcher />
             </div>
           </div>
