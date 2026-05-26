@@ -1,6 +1,6 @@
 import { Button, Card } from '@heroui/react'
 import { useTranslation } from 'react-i18next'
-import { Link, Route, Routes, useLocation } from 'react-router-dom'
+import { Link, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { HomePage } from './pages/HomePage'
 import { SessionPage } from './pages/SessionPage'
 
@@ -27,6 +27,7 @@ function LanguageSwitcher() {
 function AppShell() {
   const { t } = useTranslation()
   const location = useLocation()
+  const navigate = useNavigate()
 
   return (
     <div className="min-h-screen bg-slate-950 px-4 py-8 text-slate-50 sm:px-6 lg:px-8">
@@ -42,9 +43,9 @@ function AppShell() {
 
             <div className="flex items-center gap-3">
               {location.pathname !== '/' ? (
-                <Link to="/">
-                  <Button variant="outline">{t('actions.backHome')}</Button>
-                </Link>
+                <Button variant="outline" onPress={() => navigate('/')}>
+                  {t('actions.backHome')}
+                </Button>
               ) : null}
               <LanguageSwitcher />
             </div>
