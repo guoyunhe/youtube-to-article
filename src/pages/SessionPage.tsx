@@ -3,7 +3,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { deleteSession, getSession, saveSession } from '../lib/sessionStore'
-import type { GenerateArticleResponse, SessionRecord } from '../types'
+import type {
+  FetchSubsResponse,
+  GenerateArticleFromSubsResponse,
+  GenerateArticleResponse,
+  SessionRecord,
+} from '../types'
 
 type GenerateErrorPayload = {
   error?: string
@@ -16,12 +21,12 @@ function toPreview(text: string, max = 240): string {
   return compact.length <= max ? compact : `${compact.slice(0, max)}...`
 }
 
-async function parseGenerateResponse(response: Response): Promise<GenerateArticleResponse> {
+async function parseApiResponse<T>(response: Response, endpoint: string): Promise<T> {
   const contentType = response.headers.get('content-type') ?? 'unknown'
   const requestId = response.headers.get('x-request-id') ?? 'n/a'
   const rawBody = await response.text()
 
-  console.info('[api/generate] response meta', {
+  console.info(`[api] ${endpoint} response meta`, {
     status: response.status,
     contentType,
     requestId,
@@ -30,18 +35,18 @@ async function parseGenerateResponse(response: Response): Promise<GenerateArticl
 
   if (!rawBody.trim()) {
     throw new Error(
-      `API returned an empty response body. status=${response.status}, content-type=${contentType}, request-id=${requestId}`,
+      `${endpoint} returned an empty response body. status=${response.status}, content-type=${contentType}, request-id=${requestId}`,
     )
   }
 
-  let payload: (GenerateArticleResponse & GenerateErrorPayload) | null = null
+  let payload: (T & GenerateErrorPayload) | null = null
 
   try {
-    payload = JSON.parse(rawBody) as GenerateArticleResponse & GenerateErrorPayload
+    payload = JSON.parse(rawBody) as T & GenerateErrorPayload
   } catch (error) {
     const parseError = error instanceof Error ? error.message : 'Unknown JSON parse error.'
     throw new Error(
-      `API returned non-JSON or malformed JSON. status=${response.status}, content-type=${contentType}, request-id=${requestId}, parse-error=${parseError}, body-preview=${toPreview(rawBody)}`,
+      `${endpoint} returned non-JSON or malformed JSON. status=${response.status}, content-type=${contentType}, request-id=${requestId}, parse-error=${parseError}, body-preview=${toPreview(rawBody)}`,
     )
   }
 
@@ -49,31 +54,46 @@ async function parseGenerateResponse(response: Response): Promise<GenerateArticl
     const stage = payload.stage ? `, stage=${payload.stage}` : ''
     const errorRequestId = payload.requestId ?? requestId
     throw new Error(
-      `${payload.error ?? 'Unable to generate article.'} (status=${response.status}, request-id=${errorRequestId}${stage})`,
+      `${payload.error ?? `Unable to process ${endpoint}.`} (status=${response.status}, request-id=${errorRequestId}${stage})`,
     )
   }
 
   return payload
 }
 
-async function requestGeneration(session: SessionRecord): Promise<GenerateArticleResponse> {
-  console.info('[api/generate] request', {
-    youtubeUrl: session.youtubeUrl,
-    options: session.options,
-  })
+async function postJson<T>(
+  endpoint: '/api/fetchSubs' | '/api/generateArticle',
+  body: unknown,
+): Promise<T> {
+  console.info(`[api] request ${endpoint}`, body)
 
-  const response = await fetch('/api/generate', {
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
     },
-    body: JSON.stringify({
-      youtubeUrl: session.youtubeUrl,
-      options: session.options,
-    }),
+    body: JSON.stringify(body),
   })
 
-  return parseGenerateResponse(response)
+  return parseApiResponse<T>(response, endpoint)
+}
+
+async function requestGeneration(session: SessionRecord): Promise<GenerateArticleResponse> {
+  const subs = await postJson<FetchSubsResponse>('/api/fetchSubs', {
+    youtubeUrl: session.youtubeUrl,
+  })
+
+  const article = await postJson<GenerateArticleFromSubsResponse>('/api/generateArticle', {
+    transcript: subs.transcript,
+    options: session.options,
+  })
+
+  return {
+    article: article.article,
+    title: article.title,
+    transcriptPreview: subs.transcriptPreview,
+    videoId: subs.videoId,
+  }
 }
 
 export function SessionPage() {

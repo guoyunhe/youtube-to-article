@@ -6,14 +6,20 @@ interface Env {
   GEMINI_API_KEY?: string
 }
 
-interface GenerationRequestBody {
+interface GenerationOptions {
+  taskType: string
+  outputStyle: string
+  targetReaders: string
+  outputLanguage: 'en' | 'zh'
+}
+
+interface FetchSubsRequestBody {
   youtubeUrl: string
-  options: {
-    taskType: string
-    outputStyle: string
-    targetReaders: string
-    outputLanguage: 'en' | 'zh'
-  }
+}
+
+interface GenerateArticleRequestBody {
+  transcript: string
+  options: GenerationOptions
 }
 
 interface CaptionTrack {
@@ -64,31 +70,57 @@ function extractVideoId(input: string): string | null {
   return null
 }
 
-async function parseRequest(request: Request): Promise<GenerationRequestBody> {
-  let body: Partial<GenerationRequestBody>
+async function parseJsonBody<T>(request: Request): Promise<T> {
+  let body: T
 
   try {
-    body = (await request.json()) as Partial<GenerationRequestBody>
+    body = (await request.json()) as T
   } catch {
     throw new Error('Request body must be valid JSON.')
   }
+
+  return body
+}
+
+function parseOptions(options: unknown): GenerationOptions {
+  if (!options || typeof options !== 'object') {
+    throw new Error('Generation options are required.')
+  }
+
+  const raw = options as Partial<GenerationOptions>
+
+  return {
+    taskType: String(raw.taskType ?? 'summary'),
+    outputStyle: String(raw.outputStyle ?? 'professional'),
+    targetReaders: String(raw.targetReaders ?? 'beginners'),
+    outputLanguage: raw.outputLanguage === 'zh' ? 'zh' : 'en',
+  }
+}
+
+async function parseFetchSubsRequest(request: Request): Promise<FetchSubsRequestBody> {
+  const body = await parseJsonBody<Partial<FetchSubsRequestBody>>(request)
 
   if (!body.youtubeUrl || typeof body.youtubeUrl !== 'string') {
     throw new Error('A valid YouTube URL is required.')
   }
 
-  if (!body.options) {
-    throw new Error('Generation options are required.')
-  }
-
   return {
     youtubeUrl: body.youtubeUrl.trim(),
-    options: {
-      taskType: String(body.options.taskType ?? 'summary'),
-      outputStyle: String(body.options.outputStyle ?? 'professional'),
-      targetReaders: String(body.options.targetReaders ?? 'beginners'),
-      outputLanguage: body.options.outputLanguage === 'zh' ? 'zh' : 'en',
-    },
+  }
+}
+
+async function parseGenerateArticleRequest(request: Request): Promise<GenerateArticleRequestBody> {
+  const body = await parseJsonBody<Partial<GenerateArticleRequestBody>>(request)
+
+  if (!body.transcript || typeof body.transcript !== 'string' || !body.transcript.trim()) {
+    throw new Error('A valid transcript is required.')
+  }
+
+  const options = parseOptions(body.options)
+
+  return {
+    transcript: body.transcript.trim(),
+    options,
   }
 }
 
@@ -167,9 +199,9 @@ async function fetchTranscript(videoId: string): Promise<string> {
   return transcript.slice(0, 24000)
 }
 
-function buildPrompt(body: GenerationRequestBody, transcript: string): string {
+function buildPrompt(options: GenerationOptions, transcript: string): string {
   const languageInstruction =
-    body.options.outputLanguage === 'zh'
+    options.outputLanguage === 'zh'
       ? 'Write the response in Simplified Chinese.'
       : 'Write the response in English.'
 
@@ -177,9 +209,9 @@ function buildPrompt(body: GenerationRequestBody, transcript: string): string {
 You are generating an article from a YouTube video transcript.
 
 Requirements:
-- Task type: ${body.options.taskType}
-- Output style: ${body.options.outputStyle}
-- Target readers: ${body.options.targetReaders}
+- Task type: ${options.taskType}
+- Output style: ${options.outputStyle}
+- Target readers: ${options.targetReaders}
 - ${languageInstruction}
 - Produce a clear title on the first line.
 - Then write a polished article with sections, short paragraphs, and actionable takeaways.
@@ -216,18 +248,14 @@ function deriveTitle(article: string): string {
   return article.split('\n')[0]?.replace(/^#+\s*/, '').trim() || 'Generated article'
 }
 
-async function generateArticle(env: Env, body: GenerationRequestBody) {
+async function generateArticleFromTranscript(
+  env: Env,
+  options: GenerationOptions,
+  transcript: string,
+) {
   if (!env.GEMINI_API_KEY) {
     throw new Error('The GEMINI_API_KEY Worker secret is not configured.')
   }
-
-  const videoId = extractVideoId(body.youtubeUrl)
-
-  if (!videoId) {
-    throw new Error('Please provide a valid YouTube URL.')
-  }
-
-  const transcript = await fetchTranscript(videoId)
   const model = env.AI_MODEL || 'gemini-2.0-flash'
 
   const response = await fetch(
@@ -242,7 +270,7 @@ async function generateArticle(env: Env, body: GenerationRequestBody) {
           {
             parts: [
               {
-                text: buildPrompt(body, transcript),
+                text: buildPrompt(options, transcript),
               },
             ],
           },
@@ -260,7 +288,20 @@ async function generateArticle(env: Env, body: GenerationRequestBody) {
   return {
     article,
     title: deriveTitle(article),
-    // Short preview for the session page so local history stays readable without storing the full transcript twice.
+  }
+}
+
+async function fetchSubs(youtubeUrl: string) {
+  const videoId = extractVideoId(youtubeUrl)
+
+  if (!videoId) {
+    throw new Error('Please provide a valid YouTube URL.')
+  }
+
+  const transcript = await fetchTranscript(videoId)
+
+  return {
+    transcript,
     transcriptPreview: transcript.slice(0, 800),
     videoId,
   }
@@ -273,6 +314,7 @@ function classifyGenerationError(error: unknown): { status: number; message: str
     message === 'Request body must be valid JSON.' ||
     message === 'Unexpected end of JSON input' ||
     message === 'A valid YouTube URL is required.' ||
+    message === 'A valid transcript is required.' ||
     message === 'Generation options are required.' ||
     message === 'Please provide a valid YouTube URL.'
   ) {
@@ -293,46 +335,33 @@ function classifyGenerationError(error: unknown): { status: number; message: str
   return { status: 500, message }
 }
 
-async function handleGenerate(request: Request, env: Env): Promise<Response> {
-  const requestId = crypto.randomUUID()
-  let stage = 'parseRequest'
+function buildTraceHeaders(requestId: string): HeadersInit {
+  return {
+    'x-request-id': requestId,
+  }
+}
 
-  console.log(`[generate:${requestId}] start`)
+async function handleFetchSubs(request: Request): Promise<Response> {
+  const requestId = crypto.randomUUID()
+  let stage = 'parseFetchSubsRequest'
+
+  console.log(`[fetchSubs:${requestId}] start`)
 
   try {
-    const body = await parseRequest(request)
+    const body = await parseFetchSubsRequest(request)
     stage = 'extractVideoId'
-    const videoId = extractVideoId(body.youtubeUrl)
+    stage = 'fetchTranscript'
+    const result = await fetchSubs(body.youtubeUrl)
 
-    if (!videoId) {
-      return json(
-        {
-          error: 'Please provide a valid YouTube URL.',
-          requestId,
-          stage,
-        },
-        {
-          status: 400,
-          headers: {
-            'x-request-id': requestId,
-          },
-        },
-      )
-    }
-
-    stage = 'generateArticle'
-    const result = await generateArticle(env, body)
-    console.log(`[generate:${requestId}] success`)
+    console.log(`[fetchSubs:${requestId}] success`)
 
     return json(result, {
-      headers: {
-        'x-request-id': requestId,
-      },
+      headers: buildTraceHeaders(requestId),
     })
   } catch (error) {
     const classified = classifyGenerationError(error)
 
-    console.error(`[generate:${requestId}] failed at ${stage}`, {
+    console.error(`[fetchSubs:${requestId}] failed at ${stage}`, {
       status: classified.status,
       message: classified.message,
     })
@@ -345,9 +374,45 @@ async function handleGenerate(request: Request, env: Env): Promise<Response> {
       },
       {
         status: classified.status,
-        headers: {
-          'x-request-id': requestId,
-        },
+        headers: buildTraceHeaders(requestId),
+      },
+    )
+  }
+}
+
+async function handleGenerateArticle(request: Request, env: Env): Promise<Response> {
+  const requestId = crypto.randomUUID()
+  let stage = 'parseGenerateArticleRequest'
+
+  console.log(`[generateArticle:${requestId}] start`)
+
+  try {
+    const body = await parseGenerateArticleRequest(request)
+
+    stage = 'generateArticle'
+    const result = await generateArticleFromTranscript(env, body.options, body.transcript)
+    console.log(`[generateArticle:${requestId}] success`)
+
+    return json(result, {
+      headers: buildTraceHeaders(requestId),
+    })
+  } catch (error) {
+    const classified = classifyGenerationError(error)
+
+    console.error(`[generateArticle:${requestId}] failed at ${stage}`, {
+      status: classified.status,
+      message: classified.message,
+    })
+
+    return json(
+      {
+        error: classified.message,
+        requestId,
+        stage,
+      },
+      {
+        status: classified.status,
+        headers: buildTraceHeaders(requestId),
       },
     )
   }
@@ -357,8 +422,12 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
 
-    if (url.pathname === '/api/generate' && request.method === 'POST') {
-      return handleGenerate(request, env)
+    if (url.pathname === '/api/fetchSubs' && request.method === 'POST') {
+      return handleFetchSubs(request)
+    }
+
+    if (url.pathname === '/api/generateArticle' && request.method === 'POST') {
+      return handleGenerateArticle(request, env)
     }
 
     if (url.pathname.startsWith('/api/')) {

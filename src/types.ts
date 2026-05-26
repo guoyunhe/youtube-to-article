@@ -27,3 +27,14 @@ export interface GenerateArticleResponse {
   transcriptPreview: string
   videoId: string
 }
+
+export interface FetchSubsResponse {
+  transcript: string
+  transcriptPreview: string
+  videoId: string
+}
+
+export interface GenerateArticleFromSubsResponse {
+  article: string
+  title: string
+}
