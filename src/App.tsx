@@ -1,4 +1,13 @@
-import { Button, Card, Tabs } from '@heroui/react'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import IconButton from '@mui/material/IconButton'
+import Paper from '@mui/material/Paper'
+import Tab from '@mui/material/Tab'
+import Tabs from '@mui/material/Tabs'
+import Typography from '@mui/material/Typography'
+import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined'
+import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined'
+import SettingsBrightnessOutlinedIcon from '@mui/icons-material/SettingsBrightnessOutlined'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
@@ -47,17 +56,24 @@ function LanguageSwitcher() {
   return (
     <Tabs
       aria-label="Language options"
-      className="w-auto"
-      selectedKey={currentLanguage}
-      variant="primary"
-      onSelectionChange={(key) => void i18n.changeLanguage(String(key))}
+      sx={{
+        minHeight: 36,
+        '& .MuiTabs-indicator': { backgroundColor: 'var(--color-border-strong)' },
+      }}
+      textColor="inherit"
+      value={currentLanguage}
+      onChange={(_event, value: string) => void i18n.changeLanguage(value)}
     >
-      <Tabs.ListContainer>
-        <Tabs.List aria-label="Language options">
-          <Tabs.Tab id="en">EN</Tabs.Tab>
-          <Tabs.Tab id="zh">中文</Tabs.Tab>
-        </Tabs.List>
-      </Tabs.ListContainer>
+      <Tab
+        label="EN"
+        sx={{ minHeight: 36, minWidth: 52, px: 1.5, color: 'var(--color-text-subtle)' }}
+        value="en"
+      />
+      <Tab
+        label="中文"
+        sx={{ minHeight: 36, minWidth: 52, px: 1.5, color: 'var(--color-text-subtle)' }}
+        value="zh"
+      />
     </Tabs>
   )
 }
@@ -76,41 +92,32 @@ function ThemeSwitcher({
 
   const icon =
     themePreference === 'system' ? (
-      <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
-        <rect x="3.5" y="4" width="17" height="12" rx="2" />
-        <path d="M8 20h8" />
-      </svg>
+      <SettingsBrightnessOutlinedIcon fontSize="small" />
     ) : resolvedTheme === 'dark' ? (
-      <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
-        <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 1 0 9.8 9.8Z" />
-      </svg>
+      <DarkModeOutlinedIcon fontSize="small" />
     ) : (
-      <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="4" />
-        <path d="M12 2v2" />
-        <path d="M12 20v2" />
-        <path d="m4.93 4.93 1.41 1.41" />
-        <path d="m17.66 17.66 1.41 1.41" />
-        <path d="M2 12h2" />
-        <path d="M20 12h2" />
-        <path d="m6.34 17.66-1.41 1.41" />
-        <path d="m19.07 4.93-1.41 1.41" />
-      </svg>
+      <LightModeOutlinedIcon fontSize="small" />
     )
 
   return (
-    <div className="flex items-center gap-2 text-sm">
-      <Button
-        className="min-w-0 px-2"
-        size="sm"
-        variant="outline"
-        onPress={() => onChange(nextTheme)}
+    <Box sx={{ alignItems: 'center', display: 'flex', gap: 1 }}>
+      <IconButton
+        aria-label={t('theme.toggleHint', { theme: t(`theme.${nextTheme}`) })}
+        size="small"
+        sx={{
+          border: '1px solid var(--color-border)',
+          borderRadius: 1.5,
+          color: 'var(--color-text)',
+          p: 0.75,
+        }}
+        onClick={() => onChange(nextTheme)}
       >
         {icon}
-        <span className="sr-only">{t('theme.toggleHint', { theme: t(`theme.${nextTheme}`) })}</span>
-      </Button>
-      <span className="app-text-subtle text-xs">{t(`theme.${themePreference}`)}</span>
-    </div>
+      </IconButton>
+      <Typography sx={{ color: 'var(--color-text-subtle)', fontSize: 12 }}>
+        {t(`theme.${themePreference}`)}
+      </Typography>
+    </Box>
   )
 }
 
@@ -155,20 +162,56 @@ function AppShell() {
   }, [resolvedTheme, themePreference])
 
   return (
-    <div className="app-shell min-h-screen px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6">
-        <Card className="app-card-soft p-4 backdrop-blur">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <Link className="text-2xl font-semibold tracking-tight" to="/">
+    <Box sx={{ minHeight: '100vh', px: { lg: 8, sm: 6, xs: 4 }, py: 8 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, margin: '0 auto', maxWidth: 1152 }}>
+        <Paper
+          elevation={0}
+          sx={{
+            backdropFilter: 'blur(8px)',
+            background: 'var(--color-card-soft)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 3,
+            p: 2,
+          }}
+        >
+          <Box
+            sx={{
+              alignItems: { sm: 'center' },
+              display: 'flex',
+              flexDirection: { sm: 'row', xs: 'column' },
+              gap: 2,
+              justifyContent: 'space-between',
+            }}
+          >
+            <Box>
+              <Typography
+                component={Link}
+                sx={{
+                  color: 'inherit',
+                  fontSize: '1.5rem',
+                  fontWeight: 600,
+                  letterSpacing: '-0.01em',
+                  textDecoration: 'none',
+                }}
+                to="/"
+              >
                 {t('appName')}
-              </Link>
-              <p className="app-text-muted mt-1 text-sm">{t('tagline')}</p>
-            </div>
+              </Typography>
+              <Typography sx={{ color: 'var(--color-text-muted)', fontSize: 14, mt: 0.5 }}>
+                {t('tagline')}
+              </Typography>
+            </Box>
 
-            <div className="flex items-center gap-3">
+            <Box sx={{ alignItems: 'center', display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
               {location.pathname !== '/' ? (
-                <Button variant="outline" onPress={() => navigate('/')}>
+                <Button
+                  sx={{
+                    borderColor: 'var(--color-border)',
+                    color: 'var(--color-text)',
+                  }}
+                  variant="outlined"
+                  onClick={() => navigate('/')}
+                >
                   {t('actions.backHome')}
                 </Button>
               ) : null}
@@ -178,16 +221,16 @@ function AppShell() {
                 onChange={setThemePreference}
               />
               <LanguageSwitcher />
-            </div>
-          </div>
-        </Card>
+            </Box>
+          </Box>
+        </Paper>
 
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/session/:sessionId" element={<SessionPage />} />
         </Routes>
-      </div>
-    </div>
+      </Box>
+    </Box>
   )
 }
 

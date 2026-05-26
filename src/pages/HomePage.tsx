@@ -1,4 +1,10 @@
-import { Button, Card } from '@heroui/react'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import Paper from '@mui/material/Paper'
+import Stack from '@mui/material/Stack'
+import TextField from '@mui/material/TextField'
+import Typography from '@mui/material/Typography'
 import type { FormEvent } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -25,20 +31,26 @@ function OptionSelect({
   onChange: (value: string) => void
 }) {
   return (
-    <label className="app-text-muted flex flex-col gap-2 text-sm">
-      <span className="font-medium">{label}</span>
-      <select
-        className="app-select rounded-xl px-3 py-2 outline-none"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </label>
+    <TextField
+      fullWidth
+      label={label}
+      select
+      SelectProps={{ native: true }}
+      size="small"
+      sx={{
+        '& .MuiInputBase-input': { color: 'var(--color-text)' },
+        '& .MuiInputLabel-root': { color: 'var(--color-text-muted)' },
+        '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--color-border)' },
+      }}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+    >
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </TextField>
   )
 }
 
@@ -128,52 +140,118 @@ export function HomePage() {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
-      <Card className="app-card p-6 app-shadow-soft">
-        <div className="mb-8 max-w-3xl">
-          <p className="app-accent-surface mb-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em]">
+    <Box
+      sx={{
+        display: 'grid',
+        gap: 3,
+        gridTemplateColumns: { lg: 'minmax(0, 2fr) minmax(18rem, 1fr)', xs: '1fr' },
+      }}
+    >
+      <Paper
+        elevation={0}
+        sx={{
+          background: 'var(--color-card)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 3,
+          boxShadow: 'var(--shadow-soft)',
+          p: 3,
+        }}
+      >
+        <Box sx={{ mb: 4, maxWidth: '48rem' }}>
+          <Typography
+            sx={{
+              background: 'var(--color-accent-bg)',
+              border: '1px solid var(--color-accent-border)',
+              borderRadius: 999,
+              color: 'var(--color-accent-text)',
+              display: 'inline-flex',
+              fontSize: 12,
+              fontWeight: 700,
+              letterSpacing: '0.2em',
+              mb: 1.5,
+              px: 1.5,
+              py: 0.5,
+              textTransform: 'uppercase',
+            }}
+          >
             AI Article Generation
-          </p>
-          <h1 className="text-4xl font-semibold tracking-tight">{t('home.headline')}</h1>
-          <p className="app-text-muted mt-3 text-base">{t('home.subheadline')}</p>
-        </div>
+          </Typography>
+          <Typography sx={{ fontSize: { sm: 38, xs: 30 }, fontWeight: 600, letterSpacing: '-0.02em' }}>
+            {t('home.headline')}
+          </Typography>
+          <Typography sx={{ color: 'var(--color-text-muted)', fontSize: 16, mt: 1.5 }}>
+            {t('home.subheadline')}
+          </Typography>
+        </Box>
 
-        <form className="space-y-5" onSubmit={(event) => void handleSubmit(event)}>
-          <label className="flex flex-col gap-2">
-            <span className="app-text-muted text-sm font-medium">{t('home.urlLabel')}</span>
-            <input
-              className="app-input rounded-2xl px-4 py-4 text-base outline-none"
-              placeholder={t('home.urlPlaceholder')}
-              value={youtubeUrl}
-              onChange={(event) => {
-                setYoutubeUrl(event.target.value)
-                setError('')
-              }}
-            />
-          </label>
+        <Box component="form" sx={{ display: 'grid', gap: 2.5 }} onSubmit={(event) => void handleSubmit(event)}>
+          <TextField
+            fullWidth
+            label={t('home.urlLabel')}
+            placeholder={t('home.urlPlaceholder')}
+            sx={{
+              '& .MuiInputBase-input': { color: 'var(--color-text)', fontSize: 16, py: 1.9 },
+              '& .MuiInputLabel-root': { color: 'var(--color-text-muted)' },
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--color-border)' },
+            }}
+            value={youtubeUrl}
+            onChange={(event) => {
+              setYoutubeUrl(event.target.value)
+              setError('')
+            }}
+          />
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Button size="lg" type="submit" variant="primary">
+          <Stack direction={{ sm: 'row', xs: 'column' }} spacing={1.5}>
+            <Button
+              sx={{ px: 2.5, py: 1.1 }}
+              type="submit"
+              variant="contained"
+            >
               {t('actions.aiGenerate')}
             </Button>
             <Button
-              size="lg"
+              sx={{
+                borderColor: 'var(--color-border)',
+                color: 'var(--color-text)',
+                px: 2.5,
+                py: 1.1,
+              }}
               type="button"
-              variant="outline"
-              onPress={() => setAdvancedOpen((current) => !current)}
+              variant="outlined"
+              onClick={() => setAdvancedOpen((current) => !current)}
             >
               {t('actions.advancedOptions')}
             </Button>
-          </div>
+          </Stack>
 
           {error ? (
-            <p className="app-danger-surface rounded-xl px-4 py-3 text-sm">
+            <Typography
+              sx={{
+                background: 'var(--color-danger-bg)',
+                border: '1px solid var(--color-danger-border)',
+                borderRadius: 2,
+                color: 'var(--color-danger-text)',
+                fontSize: 14,
+                px: 2,
+                py: 1.5,
+              }}
+            >
               {error}
-            </p>
+            </Typography>
           ) : null}
 
           {advancedOpen ? (
-            <div className="app-card-soft grid gap-4 rounded-2xl p-4 sm:grid-cols-2">
+            <Box
+              sx={{
+                background: 'var(--color-card-soft)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 2,
+                display: 'grid',
+                gap: 2,
+                gridTemplateColumns: { sm: 'repeat(2, minmax(0, 1fr))', xs: '1fr' },
+                p: 2,
+              }}
+            >
               <OptionSelect
                 label={t('options.taskType')}
                 options={taskTypeOptions}
@@ -208,61 +286,89 @@ export function HomePage() {
                   })
                 }
               />
-            </div>
+            </Box>
           ) : null}
-        </form>
-      </Card>
+        </Box>
+      </Paper>
 
-      <Card className="app-card p-6">
-        <div className="mb-4">
-          <h2 className="text-xl font-semibold">{t('home.recentSessions')}</h2>
-        </div>
+      <Paper
+        elevation={0}
+        sx={{
+          background: 'var(--color-card)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 3,
+          p: 3,
+        }}
+      >
+        <Box sx={{ mb: 2 }}>
+          <Typography sx={{ fontSize: 22, fontWeight: 600 }}>{t('home.recentSessions')}</Typography>
+        </Box>
 
-        <div className="space-y-3">
+        <Stack spacing={1.5}>
           {recentSessions.length === 0 ? (
-            <p className="app-text-subtle text-sm">{t('home.noSessions')}</p>
+            <Typography sx={{ color: 'var(--color-text-subtle)', fontSize: 14 }}>
+              {t('home.noSessions')}
+            </Typography>
           ) : (
             recentSessions.map((session) => (
-              <div
+              <Box
                 key={session.id}
-                className="app-card-hover flex items-start gap-3 rounded-2xl p-4"
+                sx={{
+                  '&:hover': {
+                    background: 'color-mix(in srgb, var(--color-card-soft) 72%, var(--color-accent-bg) 28%)',
+                  },
+                  alignItems: 'flex-start',
+                  background: 'var(--color-card-soft)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 2,
+                  display: 'flex',
+                  gap: 1.5,
+                  p: 2,
+                  transition: 'background-color 160ms ease',
+                }}
               >
-                <Link className="block min-w-0 flex-1" to={`/session/${session.id}`}>
-                  <p className="line-clamp-1 text-sm font-medium">{session.youtubeUrl}</p>
-                  <div className="app-text-subtle mt-2 flex items-center justify-between gap-3 text-xs">
+                <Box
+                  component={Link}
+                  sx={{ color: 'inherit', display: 'block', flex: 1, minWidth: 0, textDecoration: 'none' }}
+                  to={`/session/${session.id}`}
+                >
+                  <Typography noWrap sx={{ fontSize: 14, fontWeight: 500 }}>
+                    {session.youtubeUrl}
+                  </Typography>
+                  <Box
+                    sx={{
+                      alignItems: 'center',
+                      color: 'var(--color-text-subtle)',
+                      display: 'flex',
+                      fontSize: 12,
+                      gap: 1.5,
+                      justifyContent: 'space-between',
+                      mt: 1,
+                    }}
+                  >
                     <span>{t(`statuses.${session.status}`)}</span>
                     <span>{new Date(session.updatedAt).toLocaleString()}</span>
-                  </div>
-                </Link>
+                  </Box>
+                </Box>
                 <Button
-                  className="h-8 min-h-8 w-8 min-w-8 px-0"
-                  size="sm"
-                  variant="danger-soft"
-                  onPress={() => void handleDeleteSession(session.id)}
+                  aria-label={t('actions.deleteSession')}
+                  sx={{
+                    background: 'var(--color-danger-bg)',
+                    borderColor: 'var(--color-danger-border)',
+                    color: 'var(--color-danger-text)',
+                    minWidth: 0,
+                    px: 1.1,
+                  }}
+                  variant="outlined"
+                  onClick={() => void handleDeleteSession(session.id)}
                 >
-                  <svg
-                    aria-hidden="true"
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M3 6h18" />
-                    <path d="M8 6V4h8v2" />
-                    <path d="M6 6l1 14h10l1-14" />
-                    <path d="M10 11v6" />
-                    <path d="M14 11v6" />
-                  </svg>
-                  <span className="sr-only">{t('actions.deleteSession')}</span>
+                  <DeleteOutlineIcon fontSize="small" />
                 </Button>
-              </div>
+              </Box>
             ))
           )}
-        </div>
-      </Card>
-    </div>
+        </Stack>
+      </Paper>
+    </Box>
   )
 }
