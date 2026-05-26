@@ -12,22 +12,22 @@ Generate structured articles from YouTube videos with a React frontend and a Clo
 ## Development
 
 ```bash
-npm install
-npm run build
-npm run lint
+pnpm install
+pnpm run build
+pnpm run lint
 ```
 
 To run the static frontend locally:
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 To run the Worker locally after building the frontend assets:
 
 ```bash
-npm run build
-npm run dev:worker
+pnpm run build
+pnpm run dev:worker
 ```
 
 ## Environment variables
@@ -47,5 +47,5 @@ AI_MODEL=gemini-2.0-flash
 ## Deploy
 
 ```bash
-npm run deploy
+pnpm run deploy
 ```
