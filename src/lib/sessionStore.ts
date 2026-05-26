@@ -36,6 +36,11 @@ export async function getSession(id: string): Promise<SessionRecord | undefined>
   return db.get('sessions', id)
 }
 
+export async function deleteSession(id: string): Promise<void> {
+  const db = await getDb()
+  await db.delete('sessions', id)
+}
+
 export async function listSessions(limit = 8): Promise<SessionRecord[]> {
   const db = await getDb()
   const sessions = await db.getAllFromIndex('sessions', 'by-updatedAt')

@@ -11,6 +11,7 @@ const resources = {
         advancedOptions: 'Advanced output options',
         backHome: 'Back to home',
         retry: 'Retry generation',
+        deleteSession: 'Delete session',
       },
       home: {
         headline: 'Paste a YouTube URL',
@@ -59,6 +60,9 @@ const resources = {
       validation: {
         invalidYoutubeUrl: 'Please enter a valid YouTube URL.',
       },
+      messages: {
+        confirmDeleteSession: 'Delete this session permanently? This action cannot be undone.',
+      },
     },
   },
   zh: {
@@ -70,6 +74,7 @@ const resources = {
         advancedOptions: '高级输出选项',
         backHome: '返回首页',
         retry: '重新生成',
+        deleteSession: '删除会话',
       },
       home: {
         headline: '粘贴 YouTube 链接',
@@ -116,6 +121,9 @@ const resources = {
       },
       validation: {
         invalidYoutubeUrl: '请输入有效的 YouTube 链接。',
+      },
+      messages: {
+        confirmDeleteSession: '确认永久删除该会话？此操作不可撤销。',
       },
     },
   },

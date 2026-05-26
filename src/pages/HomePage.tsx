@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { defaultOptions } from '../lib/defaults'
-import { listSessions, saveSession } from '../lib/sessionStore'
+import { deleteSession, listSessions, saveSession } from '../lib/sessionStore'
 import { extractVideoId } from '../lib/youtube'
 import type { GenerationOptions, SessionRecord } from '../types'
 
@@ -111,6 +111,16 @@ export function HomePage() {
     navigate(`/session/${session.id}`)
   }
 
+  async function handleDeleteSession(sessionId: string) {
+    const shouldDelete = window.confirm(t('messages.confirmDeleteSession'))
+    if (!shouldDelete) {
+      return
+    }
+
+    await deleteSession(sessionId)
+    setRecentSessions(await listSessions())
+  }
+
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
       <Card className="border border-white/10 bg-slate-900/70 p-6 shadow-2xl shadow-cyan-950/20">
@@ -202,17 +212,42 @@ export function HomePage() {
             <p className="text-sm text-slate-400">{t('home.noSessions')}</p>
           ) : (
             recentSessions.map((session) => (
-              <Link
+              <div
                 key={session.id}
-                className="block rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:border-cyan-400/40 hover:bg-white/10"
-                to={`/session/${session.id}`}
+                className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:border-cyan-400/40 hover:bg-white/10"
               >
-                <p className="line-clamp-1 text-sm font-medium text-slate-100">{session.youtubeUrl}</p>
-                <div className="mt-2 flex items-center justify-between gap-3 text-xs text-slate-400">
-                  <span>{t(`statuses.${session.status}`)}</span>
-                  <span>{new Date(session.updatedAt).toLocaleString()}</span>
-                </div>
-              </Link>
+                <Link className="block min-w-0 flex-1" to={`/session/${session.id}`}>
+                  <p className="line-clamp-1 text-sm font-medium text-slate-100">{session.youtubeUrl}</p>
+                  <div className="mt-2 flex items-center justify-between gap-3 text-xs text-slate-400">
+                    <span>{t(`statuses.${session.status}`)}</span>
+                    <span>{new Date(session.updatedAt).toLocaleString()}</span>
+                  </div>
+                </Link>
+                <Button
+                  className="h-8 min-h-8 w-8 min-w-8 px-0"
+                  size="sm"
+                  variant="danger-soft"
+                  onPress={() => void handleDeleteSession(session.id)}
+                >
+                  <svg
+                    aria-hidden="true"
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M3 6h18" />
+                    <path d="M8 6V4h8v2" />
+                    <path d="M6 6l1 14h10l1-14" />
+                    <path d="M10 11v6" />
+                    <path d="M14 11v6" />
+                  </svg>
+                  <span className="sr-only">{t('actions.deleteSession')}</span>
+                </Button>
+              </div>
             ))
           )}
         </div>

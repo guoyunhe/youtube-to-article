@@ -1,8 +1,8 @@
 import { Button, Card, Spinner } from '@heroui/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useParams } from 'react-router-dom'
-import { getSession, saveSession } from '../lib/sessionStore'
+import { useNavigate, useParams } from 'react-router-dom'
+import { deleteSession, getSession, saveSession } from '../lib/sessionStore'
 import type { GenerateArticleResponse, SessionRecord } from '../types'
 
 async function requestGeneration(session: SessionRecord): Promise<GenerateArticleResponse> {
@@ -28,6 +28,7 @@ async function requestGeneration(session: SessionRecord): Promise<GenerateArticl
 
 export function SessionPage() {
   const { sessionId } = useParams()
+  const navigate = useNavigate()
   const { t } = useTranslation()
   const [session, setSession] = useState<SessionRecord | null>(null)
   const [loadError, setLoadError] = useState('')
@@ -84,6 +85,20 @@ export function SessionPage() {
       })
     }
   }, [])
+
+  async function handleDeleteSession() {
+    if (!sessionId) {
+      return
+    }
+
+    const shouldDelete = window.confirm(t('messages.confirmDeleteSession'))
+    if (!shouldDelete) {
+      return
+    }
+
+    await deleteSession(sessionId)
+    navigate('/')
+  }
 
   useEffect(() => {
     if (!session || autostarted.current) {
@@ -176,6 +191,14 @@ export function SessionPage() {
               {t('actions.retry')}
             </Button>
           )}
+
+          <Button
+            isDisabled={session.status === 'generating'}
+            variant="danger-soft"
+            onPress={() => void handleDeleteSession()}
+          >
+            {t('actions.deleteSession')}
+          </Button>
         </div>
       </Card>
 
