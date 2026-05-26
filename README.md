@@ -15,6 +15,7 @@ Generate structured articles from YouTube videos with a React frontend and a Clo
 pnpm install
 pnpm run build
 pnpm run lint
+pnpm test
 ```
 
 To run the static frontend locally:
