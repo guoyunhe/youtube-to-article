@@ -17,7 +17,6 @@ export function classifyGenerationError(error: unknown): { status: number; messa
 
   if (
     message === 'Request body must be valid JSON.' ||
-    message === 'Unexpected end of JSON input' ||
     message === 'A valid YouTube URL is required.' ||
     message === 'A valid transcript is required.' ||
     message === 'Generation options are required.' ||
@@ -28,6 +27,7 @@ export function classifyGenerationError(error: unknown): { status: number; messa
 
   if (
     message === 'No captions were found for this video.' ||
+    message === 'Unable to parse the caption track.' ||
     message === 'The caption track did not contain readable transcript text.'
   ) {
     return { status: 422, message }
