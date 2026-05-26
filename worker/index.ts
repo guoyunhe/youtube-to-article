@@ -102,23 +102,19 @@ function extractCaptionTracks(html: string): CaptionTrack[] {
   }
 }
 
-function decodeEntities(input: string): string {
-  return input
-    .replaceAll('&amp;', '&')
-    .replaceAll('&quot;', '"')
-    .replaceAll('&#39;', "'")
-    .replaceAll('&lt;', '<')
-    .replaceAll('&gt;', '>')
-    .replaceAll('&#10;', ' ')
-    .replace(/&#(\d+);/g, (_, code: string) => String.fromCharCode(Number(code)))
-}
+function extractTranscript(payload: unknown): string {
+  const transcriptChunks = (
+    payload as {
+      events?: Array<{
+        segs?: Array<{ utf8?: string }>
+      }>
+    }
+  ).events
+    ?.flatMap((event) => event.segs ?? [])
+    .map((segment) => segment.utf8?.trim() ?? '')
+    .filter(Boolean)
 
-function extractTranscript(xml: string): string {
-  const transcriptChunks = [...xml.matchAll(/<text[^>]*>([\s\S]*?)<\/text>/g)].map((match) =>
-    decodeEntities(match[1].replace(/<[^>]+>/g, '').trim()),
-  )
-
-  return transcriptChunks.join(' ').replace(/\s+/g, ' ').trim()
+  return transcriptChunks?.join(' ').replace(/\s+/g, ' ').trim() ?? ''
 }
 
 async function fetchTranscript(videoId: string): Promise<string> {
@@ -146,18 +142,22 @@ async function fetchTranscript(videoId: string): Promise<string> {
     captionTracks.find((track) => track.languageCode?.startsWith('en')) ??
     captionTracks[0]
 
-  const transcriptResponse = await fetch(selectedTrack.baseUrl)
+  const transcriptUrl = new URL(selectedTrack.baseUrl)
+  transcriptUrl.searchParams.set('fmt', 'json3')
+
+  const transcriptResponse = await fetch(transcriptUrl)
 
   if (!transcriptResponse.ok) {
     throw new Error('Unable to fetch the caption track.')
   }
 
-  const transcript = extractTranscript(await transcriptResponse.text())
+  const transcript = extractTranscript(await transcriptResponse.json())
 
   if (!transcript) {
     throw new Error('The caption track did not contain readable transcript text.')
   }
 
+  // Keep the transcript comfortably under large-model prompt limits while preserving enough context.
   return transcript.slice(0, 24000)
 }
 
@@ -254,6 +254,7 @@ async function generateArticle(env: Env, body: GenerationRequestBody) {
   return {
     article,
     title: deriveTitle(article),
+    // Short preview for the session page so local history stays readable without storing the full transcript twice.
     transcriptPreview: transcript.slice(0, 800),
     videoId,
   }
