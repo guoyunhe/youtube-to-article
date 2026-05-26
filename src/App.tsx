@@ -1,20 +1,17 @@
 import Box from '@mui/material/Box'
 import CssBaseline from '@mui/material/CssBaseline'
-import { ThemeProvider, createTheme } from '@mui/material/styles'
+import { ThemeProvider } from '@mui/material/styles'
+import { useMemo } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { AppTopBar } from './components/AppTopBar'
 import { useThemePreference } from './hooks/useThemePreference'
 import { HomePage } from './pages/HomePage'
 import { SessionPage } from './pages/SessionPage'
-
-const theme = createTheme({
-  typography: {
-    fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
-  },
-})
+import { createAppTheme } from './theme/createAppTheme'
 
 function AppShell() {
   const { resolvedTheme, setThemePreference, themePreference } = useThemePreference()
+  const theme = useMemo(() => createAppTheme(resolvedTheme), [resolvedTheme])
 
   return (
     <ThemeProvider theme={theme}>
