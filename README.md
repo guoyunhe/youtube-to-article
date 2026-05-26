@@ -47,7 +47,7 @@ For local Worker development, create a `.dev.vars` file:
 
 ```bash
 GEMINI_API_KEY=your_api_key
-AI_MODEL=gemini-2.0-flash
+AI_MODEL=gemini-3.5-flash
 ```
 
 ## Deploy
