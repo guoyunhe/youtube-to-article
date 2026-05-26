@@ -1,10 +1,12 @@
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import CssBaseline from '@mui/material/CssBaseline'
 import IconButton from '@mui/material/IconButton'
 import Paper from '@mui/material/Paper'
 import Tab from '@mui/material/Tab'
 import Tabs from '@mui/material/Tabs'
 import Typography from '@mui/material/Typography'
+import { ThemeProvider, createTheme } from '@mui/material/styles'
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined'
 import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined'
 import SettingsBrightnessOutlinedIcon from '@mui/icons-material/SettingsBrightnessOutlined'
@@ -19,6 +21,12 @@ type ThemePreference = 'light' | 'dark' | 'system'
 type ResolvedTheme = 'light' | 'dark'
 
 const THEME_STORAGE_KEY = 'yta-theme-preference'
+
+const theme = createTheme({
+  typography: {
+    fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
+  },
+})
 
 function getStoredThemePreference(): ThemePreference {
   if (typeof window === 'undefined') {
@@ -162,75 +170,78 @@ function AppShell() {
   }, [resolvedTheme, themePreference])
 
   return (
-    <Box sx={{ minHeight: '100vh', px: { lg: 8, sm: 6, xs: 4 }, py: 8 }}>
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, margin: '0 auto', maxWidth: 1152 }}>
-        <Paper
-          elevation={0}
-          sx={{
-            backdropFilter: 'blur(8px)',
-            background: 'var(--color-card-soft)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 3,
-            p: 2,
-          }}
-        >
-          <Box
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Box sx={{ minHeight: '100vh', px: { lg: 8, sm: 6, xs: 4 }, py: 8 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, margin: '0 auto', maxWidth: 1152 }}>
+          <Paper
+            elevation={0}
             sx={{
-              alignItems: { sm: 'center' },
-              display: 'flex',
-              flexDirection: { sm: 'row', xs: 'column' },
-              gap: 2,
-              justifyContent: 'space-between',
+              backdropFilter: 'blur(8px)',
+              background: 'var(--color-card-soft)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 3,
+              p: 2,
             }}
           >
-            <Box>
-              <Typography
-                component={Link}
-                sx={{
-                  color: 'inherit',
-                  fontSize: '1.5rem',
-                  fontWeight: 600,
-                  letterSpacing: '-0.01em',
-                  textDecoration: 'none',
-                }}
-                to="/"
-              >
-                {t('appName')}
-              </Typography>
-              <Typography sx={{ color: 'var(--color-text-muted)', fontSize: 14, mt: 0.5 }}>
-                {t('tagline')}
-              </Typography>
-            </Box>
-
-            <Box sx={{ alignItems: 'center', display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
-              {location.pathname !== '/' ? (
-                <Button
+            <Box
+              sx={{
+                alignItems: { sm: 'center' },
+                display: 'flex',
+                flexDirection: { sm: 'row', xs: 'column' },
+                gap: 2,
+                justifyContent: 'space-between',
+              }}
+            >
+              <Box>
+                <Typography
+                  component={Link}
                   sx={{
-                    borderColor: 'var(--color-border)',
-                    color: 'var(--color-text)',
+                    color: 'inherit',
+                    fontSize: '1.5rem',
+                    fontWeight: 600,
+                    letterSpacing: '-0.01em',
+                    textDecoration: 'none',
                   }}
-                  variant="outlined"
-                  onClick={() => navigate('/')}
+                  to="/"
                 >
-                  {t('actions.backHome')}
-                </Button>
-              ) : null}
-              <ThemeSwitcher
-                resolvedTheme={resolvedTheme}
-                themePreference={themePreference}
-                onChange={setThemePreference}
-              />
-              <LanguageSwitcher />
-            </Box>
-          </Box>
-        </Paper>
+                  {t('appName')}
+                </Typography>
+                <Typography sx={{ color: 'var(--color-text-muted)', fontSize: 14, mt: 0.5 }}>
+                  {t('tagline')}
+                </Typography>
+              </Box>
 
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/session/:sessionId" element={<SessionPage />} />
-        </Routes>
+              <Box sx={{ alignItems: 'center', display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+                {location.pathname !== '/' ? (
+                  <Button
+                    sx={{
+                      borderColor: 'var(--color-border)',
+                      color: 'var(--color-text)',
+                    }}
+                    variant="outlined"
+                    onClick={() => navigate('/')}
+                  >
+                    {t('actions.backHome')}
+                  </Button>
+                ) : null}
+                <ThemeSwitcher
+                  resolvedTheme={resolvedTheme}
+                  themePreference={themePreference}
+                  onChange={setThemePreference}
+                />
+                <LanguageSwitcher />
+              </Box>
+            </Box>
+          </Paper>
+
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/session/:sessionId" element={<SessionPage />} />
+          </Routes>
+        </Box>
       </Box>
-    </Box>
+    </ThemeProvider>
   )
 }
 
