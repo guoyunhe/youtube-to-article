@@ -4,6 +4,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { defaultOptions } from '../lib/defaults'
+import {
+  getInitialOutputLanguage,
+  normalizeLanguage,
+  persistOutputLanguage,
+} from '../lib/language'
 import { deleteSession, listSessions, saveSession } from '../lib/sessionStore'
 import { extractVideoId } from '../lib/youtube'
 import type { GenerationOptions, SessionRecord } from '../types'
@@ -40,13 +45,14 @@ function OptionSelect({
 export function HomePage() {
   const navigate = useNavigate()
   const { t, i18n } = useTranslation()
+  const detectedLanguage = normalizeLanguage(i18n.resolvedLanguage ?? i18n.language)
   const [youtubeUrl, setYoutubeUrl] = useState('')
   const [error, setError] = useState('')
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [recentSessions, setRecentSessions] = useState<SessionRecord[]>([])
   const [options, setOptions] = useState<GenerationOptions>({
     ...defaultOptions,
-    outputLanguage: i18n.language === 'zh' ? 'zh' : 'en',
+    outputLanguage: getInitialOutputLanguage(detectedLanguage),
   })
 
   useEffect(() => {
@@ -191,10 +197,15 @@ export function HomePage() {
                 options={outputLanguageOptions}
                 value={options.outputLanguage}
                 onChange={(outputLanguage) =>
-                  setOptions((current) => ({
-                    ...current,
-                    outputLanguage: outputLanguage as GenerationOptions['outputLanguage'],
-                  }))
+                  setOptions((current) => {
+                    const nextOutputLanguage = outputLanguage as GenerationOptions['outputLanguage']
+                    persistOutputLanguage(nextOutputLanguage)
+
+                    return {
+                      ...current,
+                      outputLanguage: nextOutputLanguage,
+                    }
+                  })
                 }
               />
             </div>

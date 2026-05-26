@@ -1,5 +1,7 @@
 import i18n from 'i18next'
+import LanguageDetector from 'i18next-browser-languagedetector'
 import { initReactI18next } from 'react-i18next'
+import { normalizeLanguage } from './lib/language'
 
 const resources = {
   en: {
@@ -141,10 +143,18 @@ const resources = {
   },
 } as const
 
-void i18n.use(initReactI18next).init({
+void i18n.use(LanguageDetector).use(initReactI18next).init({
   resources,
-  lng: 'en',
   fallbackLng: 'en',
+  supportedLngs: ['en', 'zh'],
+  nonExplicitSupportedLngs: true,
+  cleanCode: true,
+  detection: {
+    order: ['localStorage', 'navigator'],
+    caches: ['localStorage'],
+    lookupLocalStorage: 'yta-language-preference',
+    convertDetectedLanguage: (language) => normalizeLanguage(language),
+  },
   interpolation: {
     escapeValue: false,
   },

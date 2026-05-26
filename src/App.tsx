@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { HomePage } from './pages/HomePage'
 import { SessionPage } from './pages/SessionPage'
+import { normalizeLanguage } from './lib/language'
 
 type ThemePreference = 'light' | 'dark' | 'system'
 type ResolvedTheme = 'light' | 'dark'
@@ -41,6 +42,7 @@ function getNextThemePreference(current: ThemePreference): ThemePreference {
 
 function LanguageSwitcher() {
   const { i18n } = useTranslation()
+  const currentLanguage = normalizeLanguage(i18n.resolvedLanguage ?? i18n.language)
 
   return (
     <div className="flex items-center gap-2 text-sm">
@@ -49,7 +51,7 @@ function LanguageSwitcher() {
           key={language}
           className="min-w-14"
           size="sm"
-          variant={i18n.language === language ? 'primary' : 'outline'}
+          variant={currentLanguage === language ? 'primary' : 'outline'}
           onPress={() => void i18n.changeLanguage(language)}
         >
           {language === 'en' ? 'EN' : '中文'}
