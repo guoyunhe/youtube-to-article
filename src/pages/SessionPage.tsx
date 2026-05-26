@@ -187,7 +187,7 @@ export function SessionPage() {
 
   if (!sessionId) {
     return (
-      <Card className="border border-rose-500/30 bg-rose-500/10 p-6 text-rose-100">
+      <Card className="app-danger-surface p-6">
         <p>{t('session.notFound')}</p>
       </Card>
     )
@@ -195,7 +195,7 @@ export function SessionPage() {
 
   if (loadError) {
     return (
-      <Card className="border border-rose-500/30 bg-rose-500/10 p-6 text-rose-100">
+      <Card className="app-danger-surface p-6">
         <p>{loadError}</p>
       </Card>
     )
@@ -203,7 +203,7 @@ export function SessionPage() {
 
   if (!session) {
     return (
-      <Card className="flex items-center gap-3 border border-white/10 bg-slate-900/70 p-6 text-slate-100">
+      <Card className="app-card flex items-center gap-3 p-6">
         <Spinner color="accent" />
         <p>{t('session.generating')}</p>
       </Card>
@@ -212,16 +212,16 @@ export function SessionPage() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(18rem,24rem)_minmax(0,1fr)]">
-      <Card className="border border-white/10 bg-slate-900/70 p-6">
+      <Card className="app-card p-6">
         <div className="space-y-5">
           <div>
-            <p className="text-sm text-slate-400">{t('session.status')}</p>
+            <p className="app-text-subtle text-sm">{t('session.status')}</p>
             <p className="mt-1 text-lg font-semibold">{t(`statuses.${session.status}`)}</p>
           </div>
 
           <div>
-            <p className="text-sm text-slate-400">{t('session.details')}</p>
-            <div className="mt-3 space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-200">
+            <p className="app-text-subtle text-sm">{t('session.details')}</p>
+            <div className="app-card-soft app-text-muted mt-3 space-y-3 rounded-2xl p-4 text-sm">
               <p className="break-all">{session.youtubeUrl}</p>
               <p>
                 {t('options.taskType')}: {t(`optionValues.${session.options.taskType}`)}
@@ -244,14 +244,14 @@ export function SessionPage() {
           </div>
 
           {session.status === 'generating' ? (
-            <div className="flex items-center gap-3 rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-3 text-sm text-cyan-100">
+            <div className="app-accent-surface flex items-center gap-3 rounded-2xl px-4 py-3 text-sm">
               <Spinner color="accent" size="sm" />
               <span>{t('session.generating')}</span>
             </div>
           ) : null}
 
           {session.error ? (
-            <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+            <div className="app-danger-surface rounded-2xl px-4 py-3 text-sm">
               {t('session.errorPrefix')} {session.error}
             </div>
           ) : null}
@@ -273,25 +273,25 @@ export function SessionPage() {
       </Card>
 
       <div className="space-y-6">
-        <Card className="border border-white/10 bg-slate-900/70 p-6">
+        <Card className="app-card p-6">
           <div className="mb-4">
             <h2 className="text-2xl font-semibold">{session.title ?? t('session.article')}</h2>
           </div>
 
           {session.article ? (
-            <article className="whitespace-pre-wrap text-sm leading-7 text-slate-100">
+            <article className="whitespace-pre-wrap text-sm leading-7">
               {session.article}
             </article>
           ) : (
-            <p className="text-sm text-slate-400">{t('session.articleEmpty')}</p>
+            <p className="app-text-subtle text-sm">{t('session.articleEmpty')}</p>
           )}
         </Card>
 
-        <Card className="border border-white/10 bg-slate-900/70 p-6">
+        <Card className="app-card p-6">
           <div className="mb-4">
             <h2 className="text-xl font-semibold">{t('session.transcriptPreview')}</h2>
           </div>
-          <p className="whitespace-pre-wrap text-sm leading-7 text-slate-300">
+          <p className="app-text-muted whitespace-pre-wrap text-sm leading-7">
             {session.transcriptPreview ?? '—'}
           </p>
         </Card>

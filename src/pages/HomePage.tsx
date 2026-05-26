@@ -20,10 +20,10 @@ function OptionSelect({
   onChange: (value: string) => void
 }) {
   return (
-    <label className="flex flex-col gap-2 text-sm text-slate-200">
+    <label className="app-text-muted flex flex-col gap-2 text-sm">
       <span className="font-medium">{label}</span>
       <select
-        className="rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-slate-50 outline-none transition focus:border-cyan-400"
+        className="app-select rounded-xl px-3 py-2 outline-none"
         value={value}
         onChange={(event) => onChange(event.target.value)}
       >
@@ -123,20 +123,20 @@ export function HomePage() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
-      <Card className="border border-white/10 bg-slate-900/70 p-6 shadow-2xl shadow-cyan-950/20">
+      <Card className="app-card p-6 app-shadow-soft">
         <div className="mb-8 max-w-3xl">
-          <p className="mb-3 inline-flex rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200">
+          <p className="app-accent-surface mb-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em]">
             Gemini + Cloudflare Workers
           </p>
           <h1 className="text-4xl font-semibold tracking-tight">{t('home.headline')}</h1>
-          <p className="mt-3 text-base text-slate-300">{t('home.subheadline')}</p>
+          <p className="app-text-muted mt-3 text-base">{t('home.subheadline')}</p>
         </div>
 
         <form className="space-y-5" onSubmit={(event) => void handleSubmit(event)}>
           <label className="flex flex-col gap-2">
-            <span className="text-sm font-medium text-slate-200">{t('home.urlLabel')}</span>
+            <span className="app-text-muted text-sm font-medium">{t('home.urlLabel')}</span>
             <input
-              className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-4 text-base text-slate-50 outline-none transition placeholder:text-slate-500 focus:border-cyan-400"
+              className="app-input rounded-2xl px-4 py-4 text-base outline-none"
               placeholder={t('home.urlPlaceholder')}
               value={youtubeUrl}
               onChange={(event) => {
@@ -161,13 +161,13 @@ export function HomePage() {
           </div>
 
           {error ? (
-            <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+            <p className="app-danger-surface rounded-xl px-4 py-3 text-sm">
               {error}
             </p>
           ) : null}
 
           {advancedOpen ? (
-            <div className="grid gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 sm:grid-cols-2">
+            <div className="app-card-soft grid gap-4 rounded-2xl p-4 sm:grid-cols-2">
               <OptionSelect
                 label={t('options.taskType')}
                 options={taskTypeOptions}
@@ -202,23 +202,23 @@ export function HomePage() {
         </form>
       </Card>
 
-      <Card className="border border-white/10 bg-slate-900/70 p-6">
+      <Card className="app-card p-6">
         <div className="mb-4">
           <h2 className="text-xl font-semibold">{t('home.recentSessions')}</h2>
         </div>
 
         <div className="space-y-3">
           {recentSessions.length === 0 ? (
-            <p className="text-sm text-slate-400">{t('home.noSessions')}</p>
+            <p className="app-text-subtle text-sm">{t('home.noSessions')}</p>
           ) : (
             recentSessions.map((session) => (
               <div
                 key={session.id}
-                className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:border-cyan-400/40 hover:bg-white/10"
+                className="app-card-hover flex items-start gap-3 rounded-2xl p-4"
               >
                 <Link className="block min-w-0 flex-1" to={`/session/${session.id}`}>
-                  <p className="line-clamp-1 text-sm font-medium text-slate-100">{session.youtubeUrl}</p>
-                  <div className="mt-2 flex items-center justify-between gap-3 text-xs text-slate-400">
+                  <p className="line-clamp-1 text-sm font-medium">{session.youtubeUrl}</p>
+                  <div className="app-text-subtle mt-2 flex items-center justify-between gap-3 text-xs">
                     <span>{t(`statuses.${session.status}`)}</span>
                     <span>{new Date(session.updatedAt).toLocaleString()}</span>
                   </div>

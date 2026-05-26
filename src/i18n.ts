@@ -44,6 +44,12 @@ const resources = {
         completed: 'Completed',
         failed: 'Failed',
       },
+      theme: {
+        system: 'Auto',
+        light: 'Light',
+        dark: 'Dark',
+        toggleHint: 'Switch theme to {{theme}}',
+      },
       optionValues: {
         summary: 'Summary article',
         tutorial: 'Tutorial article',
@@ -105,6 +111,12 @@ const resources = {
         generating: '生成中',
         completed: '已完成',
         failed: '失败',
+      },
+      theme: {
+        system: '自动',
+        light: '浅色',
+        dark: '深色',
+        toggleHint: '切换主题为{{theme}}',
       },
       optionValues: {
         summary: '总结文章',
