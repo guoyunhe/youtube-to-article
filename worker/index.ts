@@ -65,7 +65,13 @@ function extractVideoId(input: string): string | null {
 }
 
 async function parseRequest(request: Request): Promise<GenerationRequestBody> {
-  const body = (await request.json()) as Partial<GenerationRequestBody>
+  let body: Partial<GenerationRequestBody>
+
+  try {
+    body = (await request.json()) as Partial<GenerationRequestBody>
+  } catch {
+    throw new Error('Request body must be valid JSON.')
+  }
 
   if (!body.youtubeUrl || typeof body.youtubeUrl !== 'string') {
     throw new Error('A valid YouTube URL is required.')
@@ -260,23 +266,89 @@ async function generateArticle(env: Env, body: GenerationRequestBody) {
   }
 }
 
-async function handleGenerate(request: Request, env: Env): Promise<Response> {
-  const body = await parseRequest(request)
-  const videoId = extractVideoId(body.youtubeUrl)
+function classifyGenerationError(error: unknown): { status: number; message: string } {
+  const message = error instanceof Error ? error.message : 'Unexpected generation error.'
 
-  if (!videoId) {
-    return json({ error: 'Please provide a valid YouTube URL.' }, { status: 400 })
+  if (
+    message === 'Request body must be valid JSON.' ||
+    message === 'Unexpected end of JSON input' ||
+    message === 'A valid YouTube URL is required.' ||
+    message === 'Generation options are required.' ||
+    message === 'Please provide a valid YouTube URL.'
+  ) {
+    return { status: 400, message }
   }
 
+  if (
+    message === 'No captions were found for this video.' ||
+    message === 'The caption track did not contain readable transcript text.'
+  ) {
+    return { status: 422, message }
+  }
+
+  if (message.startsWith('Gemini request failed:')) {
+    return { status: 502, message }
+  }
+
+  return { status: 500, message }
+}
+
+async function handleGenerate(request: Request, env: Env): Promise<Response> {
+  const requestId = crypto.randomUUID()
+  let stage = 'parseRequest'
+
+  console.log(`[generate:${requestId}] start`)
+
   try {
+    const body = await parseRequest(request)
+    stage = 'extractVideoId'
+    const videoId = extractVideoId(body.youtubeUrl)
+
+    if (!videoId) {
+      return json(
+        {
+          error: 'Please provide a valid YouTube URL.',
+          requestId,
+          stage,
+        },
+        {
+          status: 400,
+          headers: {
+            'x-request-id': requestId,
+          },
+        },
+      )
+    }
+
+    stage = 'generateArticle'
     const result = await generateArticle(env, body)
-    return json(result)
+    console.log(`[generate:${requestId}] success`)
+
+    return json(result, {
+      headers: {
+        'x-request-id': requestId,
+      },
+    })
   } catch (error) {
+    const classified = classifyGenerationError(error)
+
+    console.error(`[generate:${requestId}] failed at ${stage}`, {
+      status: classified.status,
+      message: classified.message,
+    })
+
     return json(
       {
-        error: error instanceof Error ? error.message : 'Unexpected generation error.',
+        error: classified.message,
+        requestId,
+        stage,
       },
-      { status: 500 },
+      {
+        status: classified.status,
+        headers: {
+          'x-request-id': requestId,
+        },
+      },
     )
   }
 }

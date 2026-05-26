@@ -5,7 +5,63 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { deleteSession, getSession, saveSession } from '../lib/sessionStore'
 import type { GenerateArticleResponse, SessionRecord } from '../types'
 
+type GenerateErrorPayload = {
+  error?: string
+  requestId?: string
+  stage?: string
+}
+
+function toPreview(text: string, max = 240): string {
+  const compact = text.replace(/\s+/g, ' ').trim()
+  return compact.length <= max ? compact : `${compact.slice(0, max)}...`
+}
+
+async function parseGenerateResponse(response: Response): Promise<GenerateArticleResponse> {
+  const contentType = response.headers.get('content-type') ?? 'unknown'
+  const requestId = response.headers.get('x-request-id') ?? 'n/a'
+  const rawBody = await response.text()
+
+  console.info('[api/generate] response meta', {
+    status: response.status,
+    contentType,
+    requestId,
+    bodyPreview: toPreview(rawBody),
+  })
+
+  if (!rawBody.trim()) {
+    throw new Error(
+      `API returned an empty response body. status=${response.status}, content-type=${contentType}, request-id=${requestId}`,
+    )
+  }
+
+  let payload: (GenerateArticleResponse & GenerateErrorPayload) | null = null
+
+  try {
+    payload = JSON.parse(rawBody) as GenerateArticleResponse & GenerateErrorPayload
+  } catch (error) {
+    const parseError = error instanceof Error ? error.message : 'Unknown JSON parse error.'
+    throw new Error(
+      `API returned non-JSON or malformed JSON. status=${response.status}, content-type=${contentType}, request-id=${requestId}, parse-error=${parseError}, body-preview=${toPreview(rawBody)}`,
+    )
+  }
+
+  if (!response.ok) {
+    const stage = payload.stage ? `, stage=${payload.stage}` : ''
+    const errorRequestId = payload.requestId ?? requestId
+    throw new Error(
+      `${payload.error ?? 'Unable to generate article.'} (status=${response.status}, request-id=${errorRequestId}${stage})`,
+    )
+  }
+
+  return payload
+}
+
 async function requestGeneration(session: SessionRecord): Promise<GenerateArticleResponse> {
+  console.info('[api/generate] request', {
+    youtubeUrl: session.youtubeUrl,
+    options: session.options,
+  })
+
   const response = await fetch('/api/generate', {
     method: 'POST',
     headers: {
@@ -17,13 +73,7 @@ async function requestGeneration(session: SessionRecord): Promise<GenerateArticl
     }),
   })
 
-  const payload = (await response.json()) as GenerateArticleResponse & { error?: string }
-
-  if (!response.ok) {
-    throw new Error(payload.error ?? 'Unable to generate article.')
-  }
-
-  return payload
+  return parseGenerateResponse(response)
 }
 
 export function SessionPage() {
