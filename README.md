@@ -6,7 +6,7 @@ Generate structured articles from YouTube videos with a React frontend and a Clo
 
 - **Backend:** Cloudflare Workers + TypeScript
 - **Frontend:** React + HeroUI + React Router + i18next (English / 中文)
-- **Generation:** Google AI Studio Gemini API
+- **Generation:** Google AI Studio API & Gemini Models
 - **Persistence:** IndexedDB for local session history
 
 ## Development
@@ -55,3 +55,21 @@ AI_MODEL=gemini-3.5-flash
 ```bash
 pnpm run deploy
 ```
+
+## License
+
+GNU Affero General Public License v3.0 (AGPL-3.0)
+
+## Acknowledgements
+
+- [GitHub Copilot](https://copilot.github.com/) for code suggestions and assistance
+- [Google AI Studio](https://ai.google.dev/studio) for the Gemini models and API
+- [Cloudflare Workers](https://workers.cloudflare.com/) for the serverless platform
+- [Vite](https://vitejs.dev/) for the frontend tooling
+- [HeroUI](https://hero-ui.dev/) for the React component library
+- [i18next](https://www.i18next.com/) for internationalization support
+- [Vitest](https://vitest.dev/) for unit testing
+- [ESLint](https://eslint.org/) for code linting
+- [TypeScript](https://www.typescriptlang.org/) for type safety
+- [IndexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API) for client-side storage
+- The open-source community for inspiration and support
