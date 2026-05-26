@@ -4,7 +4,7 @@ import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { normalizeLanguage } from '../../lib/language'
+import { normalizeLanguage } from '../lib/language'
 
 const LANGUAGE_OPTIONS = [
   { label: 'English', value: 'en' },

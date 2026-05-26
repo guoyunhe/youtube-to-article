@@ -5,8 +5,8 @@ import Toolbar from '@mui/material/Toolbar'
 import Typography from '@mui/material/Typography'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { LanguageMenuButton } from './topbar/LanguageMenuButton'
-import { ThemeMenuButton } from './topbar/ThemeMenuButton'
+import { LanguageMenuButton } from './LanguageMenuButton'
+import { ThemeMenuButton } from './ThemeMenuButton'
 import type { ResolvedTheme, ThemePreference } from '../hooks/useThemePreference'
 
 export function AppTopBar({

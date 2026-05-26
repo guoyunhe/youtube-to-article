@@ -7,7 +7,7 @@ import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { ResolvedTheme, ThemePreference } from '../../hooks/useThemePreference'
+import type { ResolvedTheme, ThemePreference } from '../hooks/useThemePreference'
 
 export function ThemeMenuButton({
   themePreference,
