@@ -12,10 +12,8 @@ import Typography from '@mui/material/Typography'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import type { ResolvedTheme, ThemePreference } from '../hooks/useThemePreference'
 import { normalizeLanguage } from '../lib/language'
-
-type ThemePreference = 'light' | 'dark' | 'system'
-type ResolvedTheme = 'light' | 'dark'
 
 const LANGUAGE_OPTIONS = [
   { label: 'English', value: 'en' },
