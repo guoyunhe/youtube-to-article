@@ -23,12 +23,17 @@ To run the static frontend locally:
 pnpm run dev
 ```
 
+The Vite dev server proxies `/api/*` requests to `http://127.0.0.1:8787` by default,
+so keep the Worker running in another terminal.
+
 To run the Worker locally after building the frontend assets:
 
 ```bash
 pnpm run build
 pnpm run dev:worker
 ```
+
+If your Worker runs on a different origin, set `WORKER_DEV_ORIGIN` before `pnpm run dev`.
 
 ## Environment variables
 
