@@ -132,7 +132,7 @@ export function HomePage() {
       <Card className="app-card p-6 app-shadow-soft">
         <div className="mb-8 max-w-3xl">
           <p className="app-accent-surface mb-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em]">
-            Gemini + Cloudflare Workers
+            AI Article Generation
           </p>
           <h1 className="text-4xl font-semibold tracking-tight">{t('home.headline')}</h1>
           <p className="app-text-muted mt-3 text-base">{t('home.subheadline')}</p>

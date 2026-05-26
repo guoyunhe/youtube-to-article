@@ -18,7 +18,7 @@ const resources = {
       home: {
         headline: 'Paste a YouTube URL',
         subheadline:
-          'Drop in a video link, choose how the article should be written, and let Gemini draft it from the video captions.',
+          'Drop in a video link, choose how the article should be written, and let AI draft it from the video captions.',
         urlLabel: 'YouTube URL',
         urlPlaceholder: 'https://www.youtube.com/watch?v=...',
         recentSessions: 'Recent local sessions',
@@ -29,7 +29,7 @@ const resources = {
         generating: 'Generating article…',
         transcriptPreview: 'Transcript preview',
         article: 'Generated article',
-        articleEmpty: 'The generated article will appear here after Gemini finishes.',
+        articleEmpty: 'The generated article will appear here after generation finishes.',
         details: 'Session details',
         errorPrefix: 'Generation failed:',
         notFound: 'Session not found in local history.',
@@ -86,7 +86,7 @@ const resources = {
       },
       home: {
         headline: '粘贴 YouTube 链接',
-        subheadline: '输入视频地址，选择输出方式，然后让 Gemini 基于视频字幕生成文章。',
+        subheadline: '输入视频地址，选择输出方式，然后让 AI 基于视频字幕生成文章。',
         urlLabel: 'YouTube 链接',
         urlPlaceholder: 'https://www.youtube.com/watch?v=...',
         recentSessions: '本地历史会话',
@@ -97,7 +97,7 @@ const resources = {
         generating: '正在生成文章…',
         transcriptPreview: '字幕预览',
         article: '生成结果',
-        articleEmpty: 'Gemini 完成后，文章会显示在这里。',
+        articleEmpty: '生成完成后，文章会显示在这里。',
         details: '会话详情',
         errorPrefix: '生成失败：',
         notFound: '未在本地历史中找到该会话。',
