@@ -2,6 +2,8 @@ import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import CircularProgress from '@mui/material/CircularProgress'
 import Paper from '@mui/material/Paper'
+import Tab from '@mui/material/Tab'
+import Tabs from '@mui/material/Tabs'
 import Step from '@mui/material/Step'
 import StepContent from '@mui/material/StepContent'
 import StepLabel from '@mui/material/StepLabel'
@@ -30,6 +32,7 @@ type GenerateArticleStreamEvent =
 
 type GenerationStage = 'fetchingSubs' | 'generatingArticle'
 type StageErrorMap = Partial<Record<GenerationStage, string>>
+type ContentTab = 'captions' | 'article'
 
 class GenerationRequestError extends Error {
   stage: GenerationStage
@@ -256,6 +259,7 @@ export function SessionPage() {
   const navigate = useNavigate()
   const { t, i18n } = useTranslation()
   const [session, setSession] = useState<SessionRecord | null>(null)
+  const [activeContentTab, setActiveContentTab] = useState<ContentTab>('article')
   const [loadError, setLoadError] = useState('')
   const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(null)
   const [generationStage, setGenerationStage] = useState<GenerationStage>('fetchingSubs')
@@ -403,6 +407,10 @@ export function SessionPage() {
 
     await deleteSession(sessionId)
     navigate('/')
+  }
+
+  function handleContentTabChange(_event: React.SyntheticEvent, value: ContentTab) {
+    setActiveContentTab(value)
   }
 
   useEffect(() => {
@@ -631,44 +639,52 @@ export function SessionPage() {
         </Box>
       </Paper>
 
-      <Box sx={{ display: 'grid', gap: 3 }}>
+      <Box>
         <Paper
           elevation={0}
           sx={{
             p: 3,
           }}
         >
-          <Box sx={{ mb: 2 }}>
-            <Typography sx={{ fontSize: 32, fontWeight: 600 }}>
-              {session.title ?? t('session.article')}
-            </Typography>
-          </Box>
+          <Tabs
+            value={activeContentTab}
+            onChange={handleContentTabChange}
+            sx={{ mb: 2 }}
+          >
+            <Tab value="captions" label={t('session.tabCaptions')} />
+            <Tab value="article" label={t('session.tabArticle')} />
+          </Tabs>
 
-          {session.article ? (
-            <Typography component="article" sx={{ fontSize: 14, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
-              {session.article}
-            </Typography>
+          {activeContentTab === 'article' ? (
+            <>
+              <Box sx={{ mb: 2 }}>
+                <Typography sx={{ fontSize: 32, fontWeight: 600 }}>
+                  {session.title ?? t('session.article')}
+                </Typography>
+              </Box>
+
+              {session.article ? (
+                <Typography component="article" sx={{ fontSize: 14, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
+                  {session.article}
+                </Typography>
+              ) : (
+                <Typography sx={{ color: 'text.secondary', fontSize: 14 }}>
+                  {t('session.articleEmpty')}
+                </Typography>
+              )}
+            </>
           ) : (
-            <Typography sx={{ color: 'text.secondary', fontSize: 14 }}>
-              {t('session.articleEmpty')}
-            </Typography>
+            <>
+              <Box sx={{ mb: 2 }}>
+                <Typography sx={{ fontSize: 22, fontWeight: 600 }}>
+                  {t('session.transcriptPreview')}
+                </Typography>
+              </Box>
+              <Typography sx={{ color: 'text.secondary', fontSize: 14, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
+                {session.transcriptPreview ?? '—'}
+              </Typography>
+            </>
           )}
-        </Paper>
-
-        <Paper
-          elevation={0}
-          sx={{
-            p: 3,
-          }}
-        >
-          <Box sx={{ mb: 2 }}>
-            <Typography sx={{ fontSize: 22, fontWeight: 600 }}>
-              {t('session.transcriptPreview')}
-            </Typography>
-          </Box>
-          <Typography sx={{ color: 'text.secondary', fontSize: 14, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
-            {session.transcriptPreview ?? '—'}
-          </Typography>
         </Paper>
       </Box>
     </Box>
