@@ -62,6 +62,11 @@ function formatTimestamp(ms: number): string {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
+function buildYouTubeTimestampUrl(videoId: string, startMs: number): string {
+  const seconds = Math.max(0, Math.floor(startMs / 1000))
+  return `https://www.youtube.com/watch?v=${videoId}&t=${seconds}s`
+}
+
 async function parseApiResponse<T>(response: Response, endpoint: string): Promise<T> {
   const contentType = response.headers.get('content-type') ?? 'unknown'
   const requestId = response.headers.get('x-request-id') ?? 'n/a'
@@ -302,6 +307,7 @@ export function SessionPage() {
   const captionSegments = session?.captions ?? []
   const lastCaption = captionSegments.at(-1)
   const captionDurationMs = lastCaption ? lastCaption.startMs + lastCaption.durationMs : 0
+  const videoId = session?.videoId
   const numberFormatter = new Intl.NumberFormat(i18n.resolvedLanguage ?? i18n.language)
   const activeStep =
     session?.status === 'completed' ? 2 : generationStage === 'fetchingSubs' ? 0 : 1
@@ -744,23 +750,58 @@ export function SessionPage() {
                           borderColor: 'divider',
                           borderRadius: 1.5,
                           display: 'grid',
-                          gap: 1,
-                          gridTemplateColumns: { sm: '6rem minmax(0, 1fr)', xs: '1fr' },
+                          gap: 1.2,
+                          gridTemplateColumns: { sm: '7.5rem minmax(0, 1fr)', xs: '1fr' },
                           p: 1.2,
                         }}
                       >
-                        <Typography
-                          sx={{
-                            color: 'text.secondary',
-                            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                            fontSize: 12,
-                            fontWeight: 600,
-                            letterSpacing: 0.2,
-                          }}
-                        >
-                          {formatTimestamp(segment.startMs)}
-                        </Typography>
-                        <Typography sx={{ fontSize: 14, lineHeight: 1.75, whiteSpace: 'pre-wrap' }}>
+                        <Box sx={{ alignItems: 'flex-start', display: 'grid', gap: 0.8 }}>
+                          <Typography
+                            sx={{
+                              color: 'text.secondary',
+                              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                              fontSize: 12,
+                              fontWeight: 600,
+                              letterSpacing: 0.2,
+                            }}
+                          >
+                            {formatTimestamp(segment.startMs)}
+                          </Typography>
+
+                          {videoId ? (
+                            <Typography
+                              component="a"
+                              href={buildYouTubeTimestampUrl(videoId, segment.startMs)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              sx={{
+                                alignItems: 'center',
+                                backgroundColor: 'action.hover',
+                                border: '1px solid',
+                                borderColor: 'divider',
+                                borderRadius: 99,
+                                color: 'primary.main',
+                                display: 'inline-flex',
+                                fontSize: 11,
+                                fontWeight: 700,
+                                lineHeight: 1,
+                                px: 1,
+                                py: 0.5,
+                                textDecoration: 'none',
+                                width: 'fit-content',
+                                '&:hover': {
+                                  backgroundColor: 'primary.main',
+                                  borderColor: 'primary.main',
+                                  color: 'primary.contrastText',
+                                },
+                              }}
+                            >
+                              {t('session.jumpToVideo')}
+                            </Typography>
+                          ) : null}
+                        </Box>
+
+                        <Typography sx={{ fontSize: 14, lineHeight: 1.75, overflowWrap: 'anywhere', whiteSpace: 'normal' }}>
                           {segment.text}
                         </Typography>
                       </Box>
