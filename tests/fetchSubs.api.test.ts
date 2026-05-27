@@ -19,6 +19,11 @@ describe('fetchSubs API', () => {
       const payload = (await response.json()) as {
         transcript: string
         transcriptPreview: string
+        captions: Array<{
+          startMs: number
+          durationMs: number
+          text: string
+        }>
         videoId: string
       }
 
@@ -28,6 +33,12 @@ describe('fetchSubs API', () => {
       expect(typeof payload.transcriptPreview).toBe('string')
       expect(payload.transcriptPreview.length).toBeGreaterThan(0)
       expect(payload.transcriptPreview.length).toBeLessThanOrEqual(800)
+      expect(Array.isArray(payload.captions)).toBe(true)
+      expect(payload.captions.length).toBeGreaterThan(0)
+      expect(typeof payload.captions[0]?.startMs).toBe('number')
+      expect(typeof payload.captions[0]?.durationMs).toBe('number')
+      expect(typeof payload.captions[0]?.text).toBe('string')
+      expect(payload.captions[0]?.text.length).toBeGreaterThan(0)
     },
   )
 

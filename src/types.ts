@@ -6,6 +6,12 @@ export interface GenerationOptions {
   customPrompt: string
 }
 
+export interface CaptionSegment {
+  startMs: number
+  durationMs: number
+  text: string
+}
+
 export type SessionStatus = 'queued' | 'generating' | 'completed' | 'failed'
 
 export interface SessionRecord {
@@ -19,6 +25,7 @@ export interface SessionRecord {
   title?: string
   article?: string
   transcriptPreview?: string
+  captions?: CaptionSegment[]
   error?: string
 }
 
@@ -32,6 +39,7 @@ export interface GenerateArticleResponse {
 export interface FetchSubsResponse {
   transcript: string
   transcriptPreview: string
+  captions: CaptionSegment[]
   videoId: string
 }
 

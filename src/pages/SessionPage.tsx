@@ -49,6 +49,19 @@ function toPreview(text: string, max = 240): string {
   return compact.length <= max ? compact : `${compact.slice(0, max)}...`
 }
 
+function formatTimestamp(ms: number): string {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000))
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+
+  if (hours > 0) {
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+  }
+
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+}
+
 async function parseApiResponse<T>(response: Response, endpoint: string): Promise<T> {
   const contentType = response.headers.get('content-type') ?? 'unknown'
   const requestId = response.headers.get('x-request-id') ?? 'n/a'
@@ -264,7 +277,7 @@ export function SessionPage() {
   const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(null)
   const [generationStage, setGenerationStage] = useState<GenerationStage>('fetchingSubs')
   const [stageErrors, setStageErrors] = useState<StageErrorMap>({})
-  const [nowMs, setNowMs] = useState<number>(Date.now())
+  const [nowMs, setNowMs] = useState<number>(() => Date.now())
   const lastFetchedSubs = useRef<FetchSubsResponse | null>(null)
   const autostarted = useRef(false)
 
@@ -286,6 +299,9 @@ export function SessionPage() {
       ? Math.max(1, (nowMs - generationStartedAt) / 1000)
       : 0
   const charsPerSecond = elapsedSeconds > 0 ? receivedChars / elapsedSeconds : 0
+  const captionSegments = session?.captions ?? []
+  const lastCaption = captionSegments.at(-1)
+  const captionDurationMs = lastCaption ? lastCaption.startMs + lastCaption.durationMs : 0
   const numberFormatter = new Intl.NumberFormat(i18n.resolvedLanguage ?? i18n.language)
   const activeStep =
     session?.status === 'completed' ? 2 : generationStage === 'fetchingSubs' ? 0 : 1
@@ -373,6 +389,7 @@ export function SessionPage() {
         article: result.article,
         title: result.title,
         transcriptPreview: result.transcriptPreview,
+        captions: lastFetchedSubs.current?.captions,
         videoId: result.videoId,
         updatedAt: new Date().toISOString(),
       })
@@ -677,12 +694,93 @@ export function SessionPage() {
             <>
               <Box sx={{ mb: 2 }}>
                 <Typography sx={{ fontSize: 22, fontWeight: 600 }}>
-                  {t('session.transcriptPreview')}
+                  {t('session.tabCaptions')}
                 </Typography>
               </Box>
-              <Typography sx={{ color: 'text.secondary', fontSize: 14, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
-                {session.transcriptPreview ?? '—'}
-              </Typography>
+
+              {captionSegments.length > 0 ? (
+                <Box sx={{ display: 'grid', gap: 1.5 }}>
+                  <Box
+                    sx={{
+                      alignItems: 'center',
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 1.2,
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <Typography sx={{ color: 'text.secondary', fontSize: 13, fontWeight: 600 }}>
+                      {t('session.captionSegmentCount', {
+                        count: numberFormatter.format(captionSegments.length),
+                      })}
+                    </Typography>
+                    <Typography sx={{ color: 'text.secondary', fontSize: 13, fontWeight: 600 }}>
+                      {t('session.captionDuration', {
+                        duration: formatTimestamp(captionDurationMs),
+                      })}
+                    </Typography>
+                  </Box>
+
+                  <Box
+                    sx={{
+                      background:
+                        'linear-gradient(180deg, color-mix(in srgb, var(--mui-palette-primary-main) 7%, transparent), transparent)',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      borderRadius: 2,
+                      display: 'grid',
+                      gap: 1,
+                      maxHeight: { md: 560, xs: 420 },
+                      overflowY: 'auto',
+                      p: 1.2,
+                    }}
+                  >
+                    {captionSegments.map((segment, index) => (
+                      <Box
+                        key={`${segment.startMs}-${index}`}
+                        sx={{
+                          backgroundColor: 'background.paper',
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          borderRadius: 1.5,
+                          display: 'grid',
+                          gap: 1,
+                          gridTemplateColumns: { sm: '6rem minmax(0, 1fr)', xs: '1fr' },
+                          p: 1.2,
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            color: 'text.secondary',
+                            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                            fontSize: 12,
+                            fontWeight: 600,
+                            letterSpacing: 0.2,
+                          }}
+                        >
+                          {formatTimestamp(segment.startMs)}
+                        </Typography>
+                        <Typography sx={{ fontSize: 14, lineHeight: 1.75, whiteSpace: 'pre-wrap' }}>
+                          {segment.text}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+              ) : session.transcriptPreview ? (
+                <Box sx={{ display: 'grid', gap: 1.2 }}>
+                  <Typography sx={{ color: 'text.secondary', fontSize: 13 }}>
+                    {t('session.captionFallback')}
+                  </Typography>
+                  <Typography sx={{ color: 'text.secondary', fontSize: 14, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
+                    {session.transcriptPreview}
+                  </Typography>
+                </Box>
+              ) : (
+                <Typography sx={{ color: 'text.secondary', fontSize: 14 }}>
+                  {t('session.captionEmpty')}
+                </Typography>
+              )}
             </>
           )}
         </Paper>

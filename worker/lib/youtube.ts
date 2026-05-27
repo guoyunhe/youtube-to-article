@@ -4,6 +4,12 @@ interface CaptionTrack {
   kind?: string | null
 }
 
+interface CaptionSegment {
+  startMs: number
+  durationMs: number
+  text: string
+}
+
 const youtubeHosts = new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com'])
 const shortHosts = new Set(['youtu.be', 'www.youtu.be'])
 const youtubeVideoIdPattern = /^[A-Za-z0-9_-]{11}$/
@@ -38,22 +44,53 @@ export function extractVideoId(input: string): string | null {
   return null
 }
 
-function extractTranscript(payload: unknown): string {
-  const transcriptChunks = (
+function normalizeCaptionText(input: string): string {
+  return input.replace(/\s+/g, ' ').trim()
+}
+
+function extractCaptionSegments(payload: unknown): CaptionSegment[] {
+  const events = (
     payload as {
       events?: Array<{
+        tStartMs?: number
+        dDurationMs?: number
         segs?: Array<{ utf8?: string }>
       }>
     }
   ).events
-    ?.flatMap((event) => event.segs ?? [])
-    .map((segment) => segment.utf8?.trim() ?? '')
-    .filter(Boolean)
 
-  return transcriptChunks?.join(' ').replace(/\s+/g, ' ').trim() ?? ''
+  if (!events?.length) {
+    return []
+  }
+
+  return events
+    .map((event) => {
+      const text = normalizeCaptionText(
+        (event.segs ?? []).map((segment) => segment.utf8 ?? '').join(' '),
+      )
+
+      if (!text) {
+        return null
+      }
+
+      return {
+        startMs: Math.max(0, event.tStartMs ?? 0),
+        durationMs: Math.max(0, event.dDurationMs ?? 0),
+        text,
+      }
+    })
+    .filter((segment): segment is CaptionSegment => Boolean(segment))
 }
 
-async function fetchTranscript(videoId: string): Promise<string> {
+function buildTranscript(segments: CaptionSegment[]): string {
+  return segments.map((segment) => segment.text).join(' ').replace(/\s+/g, ' ').trim()
+}
+
+async function fetchTranscript(videoId: string): Promise<{
+  transcript: string
+  transcriptPreview: string
+  captions: CaptionSegment[]
+}> {
   // Use the iOS InnerTube client — it returns caption track URLs that don't
   // include the `exp=xpe` experiment flag, which YouTube requires auth to serve.
   const playerResponse = await fetch('https://www.youtube.com/youtubei/v1/player', {
@@ -122,14 +159,21 @@ async function fetchTranscript(videoId: string): Promise<string> {
     throw new Error('Unable to parse the caption track.')
   }
 
-  const transcript = extractTranscript(transcriptPayload)
+  const captions = extractCaptionSegments(transcriptPayload)
+  const fullTranscript = buildTranscript(captions)
 
-  if (!transcript) {
+  if (!fullTranscript || captions.length === 0) {
     throw new Error('The caption track did not contain readable transcript text.')
   }
 
-  // Keep the transcript comfortably under large-model prompt limits while preserving enough context.
-  return transcript.slice(0, 24000)
+  // Keep the generation transcript comfortably under large-model prompt limits.
+  const transcript = fullTranscript.slice(0, 24000)
+
+  return {
+    transcript,
+    transcriptPreview: fullTranscript.slice(0, 800),
+    captions,
+  }
 }
 
 export async function fetchSubs(youtubeUrl: string) {
@@ -139,11 +183,12 @@ export async function fetchSubs(youtubeUrl: string) {
     throw new Error('Please provide a valid YouTube URL.')
   }
 
-  const transcript = await fetchTranscript(videoId)
+  const transcriptData = await fetchTranscript(videoId)
 
   return {
-    transcript,
-    transcriptPreview: transcript.slice(0, 800),
+    transcript: transcriptData.transcript,
+    transcriptPreview: transcriptData.transcriptPreview,
+    captions: transcriptData.captions,
     videoId,
   }
 }
