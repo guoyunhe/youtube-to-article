@@ -9,7 +9,6 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { deleteSession, getSession, saveSession } from '../lib/sessionStore'
 import type {
   FetchSubsResponse,
-  GenerateArticleFromSubsResponse,
   GenerateArticleResponse,
   SessionRecord,
 } from '../types'
@@ -19,6 +18,11 @@ type GenerateErrorPayload = {
   requestId?: string
   stage?: string
 }
+
+type GenerateArticleStreamEvent =
+  | { type: 'delta'; chunk: string }
+  | { type: 'done'; title: string }
+  | { type: 'error'; error?: string }
 
 function toPreview(text: string, max = 240): string {
   const compact = text.replace(/\s+/g, ' ').trim()
@@ -66,7 +70,7 @@ async function parseApiResponse<T>(response: Response, endpoint: string): Promis
 }
 
 async function postJson<T>(
-  endpoint: '/api/fetchSubs' | '/api/generateArticle',
+  endpoint: '/api/fetchSubs',
   body: unknown,
 ): Promise<T> {
   console.info(`[api] request ${endpoint}`, body)
@@ -82,19 +86,124 @@ async function postJson<T>(
   return parseApiResponse<T>(response, endpoint)
 }
 
-async function requestGeneration(session: SessionRecord): Promise<GenerateArticleResponse> {
+function parseStreamLine(line: string): GenerateArticleStreamEvent | null {
+  if (!line.trim()) {
+    return null
+  }
+
+  const payload = JSON.parse(line) as Partial<GenerateArticleStreamEvent>
+
+  if (payload.type === 'delta' && typeof payload.chunk === 'string') {
+    return {
+      type: 'delta',
+      chunk: payload.chunk,
+    }
+  }
+
+  if (payload.type === 'done' && typeof payload.title === 'string') {
+    return {
+      type: 'done',
+      title: payload.title,
+    }
+  }
+
+  if (payload.type === 'error') {
+    return {
+      type: 'error',
+      error: payload.error,
+    }
+  }
+
+  return null
+}
+
+function deriveTitle(article: string): string {
+  return article.split('\n')[0]?.replace(/^#+\s*/, '').trim() || 'Generated article'
+}
+
+async function requestGeneration(
+  session: SessionRecord,
+  onDelta: (article: string) => void,
+): Promise<GenerateArticleResponse> {
   const subs = await postJson<FetchSubsResponse>('/api/fetchSubs', {
     youtubeUrl: session.youtubeUrl,
   })
 
-  const article = await postJson<GenerateArticleFromSubsResponse>('/api/generateArticle', {
-    transcript: subs.transcript,
-    options: session.options,
+  const response = await fetch('/api/generateArticle', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      transcript: subs.transcript,
+      options: session.options,
+    }),
   })
 
+  if (!response.ok) {
+    await parseApiResponse<GenerateErrorPayload>(response, '/api/generateArticle')
+  }
+
+  if (!response.body) {
+    throw new Error('/api/generateArticle returned an empty response stream.')
+  }
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let pending = ''
+  let article = ''
+  let title = ''
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+
+      if (done) {
+        break
+      }
+
+      pending += decoder.decode(value, { stream: true })
+      const lines = pending.split('\n')
+      pending = lines.pop() ?? ''
+
+      for (const line of lines) {
+        const event = parseStreamLine(line)
+
+        if (!event) {
+          continue
+        }
+
+        if (event.type === 'delta') {
+          article += event.chunk
+          onDelta(article)
+          continue
+        }
+
+        if (event.type === 'done') {
+          title = event.title
+          continue
+        }
+
+        if (event.type === 'error') {
+          throw new Error(event.error ?? 'Unable to generate article.')
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock()
+  }
+
+  const finalArticle = article.trim()
+
+  if (!finalArticle) {
+    throw new Error('The AI returned an empty article.')
+  }
+
+  const finalTitle = title || deriveTitle(finalArticle)
+
   return {
-    article: article.article,
-    title: article.title,
+    article: finalArticle,
+    title: finalTitle,
     transcriptPreview: subs.transcriptPreview,
     videoId: subs.videoId,
   }
@@ -132,6 +241,8 @@ export function SessionPage() {
     const generatingSession: SessionRecord = {
       ...currentSession,
       status: 'generating',
+      article: '',
+      title: undefined,
       error: undefined,
       updatedAt: new Date().toISOString(),
     }
@@ -139,7 +250,19 @@ export function SessionPage() {
     await persistSession(generatingSession)
 
     try {
-      const result = await requestGeneration(generatingSession)
+      const result = await requestGeneration(generatingSession, (article) => {
+        setSession((previous) => {
+          if (!previous || previous.id !== generatingSession.id) {
+            return previous
+          }
+
+          return {
+            ...previous,
+            article,
+            updatedAt: new Date().toISOString(),
+          }
+        })
+      })
 
       await persistSession({
         ...generatingSession,

@@ -6,7 +6,7 @@ afterEach(() => {
 })
 
 describe('generateArticle API', () => {
-  it('POST /api/generateArticle returns article and title', async () => {
+  it('POST /api/generateArticle returns streaming delta and done events', async () => {
     const externalFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = input instanceof Request ? input.url : String(input)
 
@@ -20,18 +20,13 @@ describe('generateArticle API', () => {
         expect(prompt).toContain('test transcript')
 
         return new Response(
-          JSON.stringify({
-            candidates: [
-              {
-                content: {
-                  parts: [{ text: '# My Article\nGenerated body paragraph.' }],
-                },
-              },
-            ],
-          }),
+          [
+            'data: {"candidates":[{"content":{"parts":[{"text":"# My Article\\n"}]}}]}\n\n',
+            'data: {"candidates":[{"content":{"parts":[{"text":"Generated body paragraph."}]}}]}\n\n',
+          ].join(''),
           {
             status: 200,
-            headers: { 'content-type': 'application/json' },
+            headers: { 'content-type': 'text/event-stream' },
           },
         )
       }
@@ -52,14 +47,23 @@ describe('generateArticle API', () => {
     })
 
     expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toContain('application/x-ndjson')
 
-    const payload = (await response.json()) as {
-      article: string
-      title: string
-    }
+    const rawStream = await response.text()
+    const lines = rawStream
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
 
-    expect(payload.title).toBe('My Article')
-    expect(payload.article).toContain('Generated body paragraph.')
+    const events = lines.map((line) => JSON.parse(line) as { type: string; chunk?: string; title?: string })
+    const article = events
+      .filter((event) => event.type === 'delta')
+      .map((event) => event.chunk ?? '')
+      .join('')
+    const doneEvent = events.find((event) => event.type === 'done')
+
+    expect(article).toContain('Generated body paragraph.')
+    expect(doneEvent?.title).toBe('My Article')
     expect(externalFetch).toHaveBeenCalledTimes(1)
   })
 

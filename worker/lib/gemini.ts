@@ -45,8 +45,31 @@ function extractArticleText(payload: unknown): string {
   return article
 }
 
-function deriveTitle(article: string): string {
+function extractTextParts(payload: unknown): string {
+  const candidates = (payload as {
+    candidates?: Array<{
+      content?: {
+        parts?: Array<{ text?: string }>
+      }
+    }>
+  }).candidates
+
+  return (
+    candidates
+      ?.flatMap((candidate) => candidate.content?.parts ?? [])
+      .map((part) => part.text ?? '')
+      .join('') ?? ''
+  )
+}
+
+export function deriveTitle(article: string): string {
   return article.split('\n')[0]?.replace(/^#+\s*/, '').trim() || 'Generated article'
+}
+
+export function assertGeminiConfigured(env: Env): void {
+  if (!env.GEMINI_API_KEY) {
+    throw new Error('The GEMINI_API_KEY Worker secret is not configured.')
+  }
 }
 
 export async function generateArticleFromTranscript(
@@ -54,9 +77,7 @@ export async function generateArticleFromTranscript(
   options: GenerationOptions,
   transcript: string,
 ) {
-  if (!env.GEMINI_API_KEY) {
-    throw new Error('The GEMINI_API_KEY Worker secret is not configured.')
-  }
+  assertGeminiConfigured(env)
   const model = env.AI_MODEL || 'gemini-2.0-flash'
 
   const response = await fetch(
@@ -89,5 +110,91 @@ export async function generateArticleFromTranscript(
   return {
     article,
     title: deriveTitle(article),
+  }
+}
+
+export async function* generateArticleStreamFromTranscript(
+  env: Env,
+  options: GenerationOptions,
+  transcript: string,
+): AsyncGenerator<string, void, unknown> {
+  assertGeminiConfigured(env)
+  const model = env.AI_MODEL || 'gemini-2.0-flash'
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${env.GEMINI_API_KEY}`,
+    {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: buildPrompt(options, transcript),
+              },
+            ],
+          },
+        ],
+      }),
+    },
+  )
+
+  if (!response.ok) {
+    throw new Error(`Gemini request failed: ${await response.text()}`)
+  }
+
+  if (!response.body) {
+    throw new Error('Gemini returned an empty response stream.')
+  }
+
+  const decoder = new TextDecoder()
+  const reader = response.body.getReader()
+  let pending = ''
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+
+      if (done) {
+        break
+      }
+
+      pending += decoder.decode(value, { stream: true })
+      const lines = pending.split('\n')
+      pending = lines.pop() ?? ''
+
+      for (const line of lines) {
+        const trimmed = line.trim()
+
+        if (!trimmed.startsWith('data:')) {
+          continue
+        }
+
+        const jsonText = trimmed.slice(5).trim()
+
+        if (!jsonText || jsonText === '[DONE]') {
+          continue
+        }
+
+        let payload: unknown
+
+        try {
+          payload = JSON.parse(jsonText)
+        } catch {
+          continue
+        }
+
+        const chunk = extractTextParts(payload)
+
+        if (chunk) {
+          yield chunk
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock()
   }
 }
