@@ -212,10 +212,32 @@ async function requestGeneration(
 export function SessionPage() {
   const { sessionId } = useParams()
   const navigate = useNavigate()
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [session, setSession] = useState<SessionRecord | null>(null)
   const [loadError, setLoadError] = useState('')
+  const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(null)
+  const [nowMs, setNowMs] = useState<number>(Date.now())
   const autostarted = useRef(false)
+
+  useEffect(() => {
+    if (session?.status !== 'generating') {
+      return
+    }
+
+    const interval = window.setInterval(() => {
+      setNowMs(Date.now())
+    }, 1000)
+
+    return () => window.clearInterval(interval)
+  }, [session?.status])
+
+  const receivedChars = session?.status === 'generating' ? (session.article?.length ?? 0) : 0
+  const elapsedSeconds =
+    session?.status === 'generating' && generationStartedAt
+      ? Math.max(1, (nowMs - generationStartedAt) / 1000)
+      : 0
+  const charsPerSecond = elapsedSeconds > 0 ? receivedChars / elapsedSeconds : 0
+  const numberFormatter = new Intl.NumberFormat(i18n.resolvedLanguage ?? i18n.language)
 
   useEffect(() => {
     if (!sessionId) {
@@ -238,6 +260,8 @@ export function SessionPage() {
   }
 
   const generate = useCallback(async (currentSession: SessionRecord) => {
+    setGenerationStartedAt(Date.now())
+
     const generatingSession: SessionRecord = {
       ...currentSession,
       status: 'generating',
@@ -280,6 +304,8 @@ export function SessionPage() {
         error: error instanceof Error ? error.message : 'Unable to generate article.',
         updatedAt: new Date().toISOString(),
       })
+    } finally {
+      setGenerationStartedAt(null)
     }
   }, [])
 
@@ -428,20 +454,29 @@ export function SessionPage() {
           {session.status === 'generating' ? (
             <Box
               sx={{
-                alignItems: 'center',
                 backgroundColor: 'info.light',
                 border: '1px solid',
                 borderColor: 'info.main',
                 color: 'info.contrastText',
-                display: 'flex',
+                display: 'grid',
                 fontSize: 14,
                 gap: 1,
                 px: 2,
                 py: 1.5,
               }}
             >
-              <CircularProgress size={18} />
-              <span>{t('session.generating')}</span>
+              <Box sx={{ alignItems: 'center', display: 'flex', gap: 1 }}>
+                <CircularProgress size={18} />
+                <span>{t('session.generating')}</span>
+              </Box>
+              <Typography sx={{ fontSize: 13, opacity: 0.92 }}>
+                {t('session.streamingProgress')}: {t('session.receivedChars', { count: numberFormatter.format(receivedChars) })}
+              </Typography>
+              <Typography sx={{ fontSize: 13, opacity: 0.92 }}>
+                {t('session.generationSpeed', {
+                  speed: numberFormatter.format(Number(charsPerSecond.toFixed(1))),
+                })}
+              </Typography>
             </Box>
           ) : null}
 

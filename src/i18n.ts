@@ -27,6 +27,9 @@ const resources = {
       session: {
         status: 'Status',
         generating: 'Generating article…',
+        streamingProgress: 'Streaming progress',
+        receivedChars: 'Received {{count}} chars',
+        generationSpeed: '{{speed}} chars/s',
         transcriptPreview: 'Transcript preview',
         article: 'Generated article',
         articleEmpty: 'The generated article will appear here after generation finishes.',
@@ -95,6 +98,9 @@ const resources = {
       session: {
         status: '状态',
         generating: '正在生成文章…',
+        streamingProgress: '流式进度',
+        receivedChars: '已接收 {{count}} 个字符',
+        generationSpeed: '{{speed}} 字符/秒',
         transcriptPreview: '字幕预览',
         article: '生成结果',
         articleEmpty: '生成完成后，文章会显示在这里。',
