@@ -1,13 +1,12 @@
 import Box from '@mui/material/Box'
-import Button from '@mui/material/Button'
 import Paper from '@mui/material/Paper'
-import Stack from '@mui/material/Stack'
-import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import type { FormEvent } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import { HomeAdvancedOptionsPanel } from '../components/HomeAdvancedOptionsPanel'
+import { HomeUrlInputSection } from '../components/HomeUrlInputSection'
 import { SessionList } from '../components/SessionList'
 import { defaultOptions } from '../lib/defaults'
 import {
@@ -18,36 +17,6 @@ import {
 import { deleteSession, listSessions, saveSession } from '../lib/sessionStore'
 import { extractVideoId } from '../lib/youtube'
 import type { GenerationOptions, SessionRecord } from '../types'
-
-function OptionSelect({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string
-  value: string
-  options: Array<{ value: string; label: string }>
-  onChange: (value: string) => void
-}) {
-  return (
-    <TextField
-      fullWidth
-      label={label}
-      select
-      SelectProps={{ native: true }}
-      size="small"
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-    >
-      {options.map((option) => (
-        <option key={option.value} value={option.value}>
-          {option.label}
-        </option>
-      ))}
-    </TextField>
-  )
-}
 
 export function HomePage() {
   const navigate = useNavigate()
@@ -177,99 +146,45 @@ export function HomePage() {
         </Box>
 
         <Box component="form" sx={{ display: 'grid', gap: 2.5 }} onSubmit={(event) => void handleSubmit(event)}>
-          <TextField
-            fullWidth
-            label={t('home.urlLabel')}
-            placeholder={t('home.urlPlaceholder')}
-            sx={{ '& .MuiInputBase-input': { fontSize: 16, py: 1.9 } }}
-            value={youtubeUrl}
-            onChange={(event) => {
-              setYoutubeUrl(event.target.value)
+          <HomeUrlInputSection
+            advancedOptionsLabel={t('actions.advancedOptions')}
+            error={error}
+            generateLabel={t('actions.aiGenerate')}
+            urlLabel={t('home.urlLabel')}
+            urlPlaceholder={t('home.urlPlaceholder')}
+            youtubeUrl={youtubeUrl}
+            onToggleAdvanced={() => setAdvancedOpen((current) => !current)}
+            onYoutubeUrlChange={(value) => {
+              setYoutubeUrl(value)
               setError('')
             }}
           />
 
-          <Stack direction={{ sm: 'row', xs: 'column' }} spacing={1.5}>
-            <Button
-              sx={{ px: 2.5, py: 1.1 }}
-              type="submit"
-              variant="contained"
-            >
-              {t('actions.aiGenerate')}
-            </Button>
-            <Button
-              sx={{ px: 2.5, py: 1.1 }}
-              type="button"
-              variant="outlined"
-              onClick={() => setAdvancedOpen((current) => !current)}
-            >
-              {t('actions.advancedOptions')}
-            </Button>
-          </Stack>
+          <HomeAdvancedOptionsPanel
+            open={advancedOpen}
+            options={options}
+            outputLanguageLabel={t('options.outputLanguage')}
+            outputLanguageOptions={outputLanguageOptions}
+            outputStyleLabel={t('options.outputStyle')}
+            outputStyleOptions={outputStyleOptions}
+            targetReadersLabel={t('options.targetReaders')}
+            targetReadersOptions={targetReadersOptions}
+            taskTypeLabel={t('options.taskType')}
+            taskTypeOptions={taskTypeOptions}
+            onOutputLanguageChange={(outputLanguage) =>
+              setOptions((current) => {
+                persistOutputLanguage(outputLanguage)
 
-          {error ? (
-            <Typography
-              sx={(theme) => ({
-                backgroundColor: theme.palette.error.light,
-                border: `1px solid ${theme.palette.error.main}`,
-                color: theme.palette.error.contrastText,
-                fontSize: 14,
-                px: 2,
-                py: 1.5,
-              })}
-            >
-              {error}
-            </Typography>
-          ) : null}
-
-          {advancedOpen ? (
-            <Box
-              sx={{
-                backgroundColor: 'background.paper',
-                border: '1px solid',
-                borderColor: 'divider',
-                display: 'grid',
-                gap: 2,
-                gridTemplateColumns: { sm: 'repeat(2, minmax(0, 1fr))', xs: '1fr' },
-                p: 2,
-              }}
-            >
-              <OptionSelect
-                label={t('options.taskType')}
-                options={taskTypeOptions}
-                value={options.taskType}
-                onChange={(taskType) => setOptions((current) => ({ ...current, taskType }))}
-              />
-              <OptionSelect
-                label={t('options.outputStyle')}
-                options={outputStyleOptions}
-                value={options.outputStyle}
-                onChange={(outputStyle) => setOptions((current) => ({ ...current, outputStyle }))}
-              />
-              <OptionSelect
-                label={t('options.targetReaders')}
-                options={targetReadersOptions}
-                value={options.targetReaders}
-                onChange={(targetReaders) => setOptions((current) => ({ ...current, targetReaders }))}
-              />
-              <OptionSelect
-                label={t('options.outputLanguage')}
-                options={outputLanguageOptions}
-                value={options.outputLanguage}
-                onChange={(outputLanguage) =>
-                  setOptions((current) => {
-                    const nextOutputLanguage = outputLanguage as GenerationOptions['outputLanguage']
-                    persistOutputLanguage(nextOutputLanguage)
-
-                    return {
-                      ...current,
-                      outputLanguage: nextOutputLanguage,
-                    }
-                  })
+                return {
+                  ...current,
+                  outputLanguage,
                 }
-              />
-            </Box>
-          ) : null}
+              })
+            }
+            onOutputStyleChange={(outputStyle) => setOptions((current) => ({ ...current, outputStyle }))}
+            onTargetReadersChange={(targetReaders) => setOptions((current) => ({ ...current, targetReaders }))}
+            onTaskTypeChange={(taskType) => setOptions((current) => ({ ...current, taskType }))}
+          />
         </Box>
       </Paper>
 
