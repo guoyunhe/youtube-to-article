@@ -56,6 +56,14 @@ AI_MODEL=gemini-3.5-flash
 pnpm run deploy
 ```
 
+## Thinking
+
+### How to fetch and process YouTube video captions?
+
+YouTube website blocks bots and scripts from fetching captions directly. Luckily, YouTube provides a special API for iOS devices that doesn't require authentication. This was learned by digging into code base of yt-dlp, a popular open-source YouTube downloader.
+
+By using this API, I don't need any proxy server or third-party service. And it is totally free to use!
+
 ## License
 
 GNU Affero General Public License v3.0 (AGPL-3.0)
