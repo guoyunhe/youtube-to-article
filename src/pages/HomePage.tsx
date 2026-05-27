@@ -1,6 +1,5 @@
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
@@ -8,7 +7,8 @@ import Typography from '@mui/material/Typography'
 import type { FormEvent } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import { SessionList } from '../components/SessionList'
 import { defaultOptions } from '../lib/defaults'
 import {
   getInitialOutputLanguage,
@@ -283,65 +283,13 @@ export function HomePage() {
           <Typography sx={{ fontSize: 22, fontWeight: 600 }}>{t('home.recentSessions')}</Typography>
         </Box>
 
-        <Stack spacing={1.5}>
-          {recentSessions.length === 0 ? (
-            <Typography sx={{ color: 'text.secondary', fontSize: 14 }}>
-              {t('home.noSessions')}
-            </Typography>
-          ) : (
-            recentSessions.map((session) => (
-              <Box
-                key={session.id}
-                sx={{
-                  '&:hover': {
-                    backgroundColor: 'action.hover',
-                  },
-                  alignItems: 'flex-start',
-                  backgroundColor: 'background.paper',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  display: 'flex',
-                  gap: 1.5,
-                  p: 2,
-                  transition: 'background-color 160ms ease',
-                }}
-              >
-                <Box
-                  component={Link}
-                  sx={{ color: 'inherit', display: 'block', flex: 1, minWidth: 0, textDecoration: 'none' }}
-                  to={`/session/${session.id}`}
-                >
-                  <Typography noWrap sx={{ fontSize: 14, fontWeight: 500 }}>
-                    {session.youtubeUrl}
-                  </Typography>
-                  <Box
-                    sx={{
-                      alignItems: 'center',
-                      color: 'text.secondary',
-                      display: 'flex',
-                      fontSize: 12,
-                      gap: 1.5,
-                      justifyContent: 'space-between',
-                      mt: 1,
-                    }}
-                  >
-                    <span>{t(`statuses.${session.status}`)}</span>
-                    <span>{new Date(session.updatedAt).toLocaleString()}</span>
-                  </Box>
-                </Box>
-                <Button
-                  aria-label={t('actions.deleteSession')}
-                  color="error"
-                  sx={{ minWidth: 0, px: 1.1 }}
-                  variant="outlined"
-                  onClick={() => void handleDeleteSession(session.id)}
-                >
-                  <DeleteOutlineIcon fontSize="small" />
-                </Button>
-              </Box>
-            ))
-          )}
-        </Stack>
+        <SessionList
+          deleteLabel={t('actions.deleteSession')}
+          emptyText={t('home.noSessions')}
+          getStatusLabel={(status) => t(`statuses.${status}`)}
+          sessions={recentSessions}
+          onDelete={(sessionId) => void handleDeleteSession(sessionId)}
+        />
       </Paper>
     </Box>
   )
