@@ -35,7 +35,7 @@ function OptionSelect({
   )
 }
 
-type HomeUrlInputSectionProps = {
+type UrlInputSectionProps = {
   youtubeUrl: string
   youtubeUrlError: string
   options: GenerationOptions
@@ -58,7 +58,7 @@ type HomeUrlInputSectionProps = {
   onCustomPromptChange: (value: string) => void
 }
 
-export function HomeUrlInputSection({
+export function UrlInputSection({
   youtubeUrl,
   youtubeUrlError,
   options,
@@ -79,7 +79,7 @@ export function HomeUrlInputSection({
   onOutputStyleChange,
   onTargetReadersChange,
   onCustomPromptChange,
-}: HomeUrlInputSectionProps) {
+}: UrlInputSectionProps) {
   return (
     <>
       <TextField

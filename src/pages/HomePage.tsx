@@ -5,8 +5,8 @@ import type { FormEvent } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { HomeUrlInputSection } from '../components/HomeUrlInputSection'
 import { SessionList } from '../components/SessionList'
+import { UrlInputSection } from '../components/UrlInputSection'
 import { defaultOptions } from '../lib/defaults'
 import { normalizeLanguage } from '../lib/language'
 import { deleteSession, listSessions, saveSession } from '../lib/sessionStore'
@@ -143,7 +143,7 @@ export function HomePage() {
         </Box>
 
         <Box component="form" sx={{ display: 'grid', gap: 2.5 }} onSubmit={(event) => void handleSubmit(event)}>
-          <HomeUrlInputSection
+          <UrlInputSection
             generateLabel={t('actions.aiGenerate')}
             options={options}
             outputStyleLabel={t('options.outputStyle')}
