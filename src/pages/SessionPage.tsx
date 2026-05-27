@@ -194,10 +194,9 @@ export function SessionPage() {
       <Paper
         elevation={0}
         sx={{
-          background: 'var(--color-danger-bg)',
-          border: '1px solid var(--color-danger-border)',
-          borderRadius: 3,
-          color: 'var(--color-danger-text)',
+          backgroundColor: 'error.light',
+          borderColor: 'error.main',
+          color: 'error.contrastText',
           p: 3,
         }}
       >
@@ -211,10 +210,9 @@ export function SessionPage() {
       <Paper
         elevation={0}
         sx={{
-          background: 'var(--color-danger-bg)',
-          border: '1px solid var(--color-danger-border)',
-          borderRadius: 3,
-          color: 'var(--color-danger-text)',
+          backgroundColor: 'error.light',
+          borderColor: 'error.main',
+          color: 'error.contrastText',
           p: 3,
         }}
       >
@@ -229,9 +227,8 @@ export function SessionPage() {
         elevation={0}
         sx={{
           alignItems: 'center',
-          background: 'var(--color-card)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 3,
+          backgroundColor: 'background.paper',
+          borderColor: 'divider',
           display: 'flex',
           gap: 1.5,
           p: 3,
@@ -254,15 +251,12 @@ export function SessionPage() {
       <Paper
         elevation={0}
         sx={{
-          background: 'var(--color-card)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 3,
           p: 3,
         }}
       >
         <Box sx={{ display: 'grid', gap: 2.5 }}>
           <Box>
-            <Typography sx={{ color: 'var(--color-text-subtle)', fontSize: 14 }}>
+            <Typography sx={{ color: 'text.secondary', fontSize: 14 }}>
               {t('session.status')}
             </Typography>
             <Typography sx={{ fontSize: 22, fontWeight: 600, mt: 0.5 }}>
@@ -271,15 +265,15 @@ export function SessionPage() {
           </Box>
 
           <Box>
-            <Typography sx={{ color: 'var(--color-text-subtle)', fontSize: 14 }}>
+            <Typography sx={{ color: 'text.secondary', fontSize: 14 }}>
               {t('session.details')}
             </Typography>
             <Box
               sx={{
-                background: 'var(--color-card-soft)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 2,
-                color: 'var(--color-text-muted)',
+                backgroundColor: 'background.paper',
+                border: '1px solid',
+                borderColor: 'divider',
+                color: 'text.secondary',
                 display: 'grid',
                 fontSize: 14,
                 gap: 1.2,
@@ -312,10 +306,10 @@ export function SessionPage() {
             <Box
               sx={{
                 alignItems: 'center',
-                background: 'var(--color-accent-bg)',
-                border: '1px solid var(--color-accent-border)',
-                borderRadius: 2,
-                color: 'var(--color-accent-text)',
+                backgroundColor: 'info.light',
+                border: '1px solid',
+                borderColor: 'info.main',
+                color: 'info.contrastText',
                 display: 'flex',
                 fontSize: 14,
                 gap: 1,
@@ -331,10 +325,10 @@ export function SessionPage() {
           {session.error ? (
             <Box
               sx={{
-                background: 'var(--color-danger-bg)',
-                border: '1px solid var(--color-danger-border)',
-                borderRadius: 2,
-                color: 'var(--color-danger-text)',
+                backgroundColor: 'error.light',
+                border: '1px solid',
+                borderColor: 'error.main',
+                color: 'error.contrastText',
                 fontSize: 14,
                 px: 2,
                 py: 1.5,
@@ -352,11 +346,7 @@ export function SessionPage() {
 
           <Button
             disabled={session.status === 'generating'}
-            sx={{
-              background: 'var(--color-danger-bg)',
-              borderColor: 'var(--color-danger-border)',
-              color: 'var(--color-danger-text)',
-            }}
+            color="error"
             variant="outlined"
             onClick={() => void handleDeleteSession()}
           >
@@ -369,9 +359,6 @@ export function SessionPage() {
         <Paper
           elevation={0}
           sx={{
-            background: 'var(--color-card)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 3,
             p: 3,
           }}
         >
@@ -386,7 +373,7 @@ export function SessionPage() {
               {session.article}
             </Typography>
           ) : (
-            <Typography sx={{ color: 'var(--color-text-subtle)', fontSize: 14 }}>
+            <Typography sx={{ color: 'text.secondary', fontSize: 14 }}>
               {t('session.articleEmpty')}
             </Typography>
           )}
@@ -395,9 +382,6 @@ export function SessionPage() {
         <Paper
           elevation={0}
           sx={{
-            background: 'var(--color-card)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 3,
             p: 3,
           }}
         >
@@ -406,7 +390,7 @@ export function SessionPage() {
               {t('session.transcriptPreview')}
             </Typography>
           </Box>
-          <Typography sx={{ color: 'var(--color-text-muted)', fontSize: 14, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
+          <Typography sx={{ color: 'text.secondary', fontSize: 14, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
             {session.transcriptPreview ?? '—'}
           </Typography>
         </Paper>

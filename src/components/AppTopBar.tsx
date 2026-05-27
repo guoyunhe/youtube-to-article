@@ -26,12 +26,8 @@ export function AppTopBar({
     <AppBar
       position="sticky"
       color="inherit"
-      sx={{
-        backdropFilter: 'blur(18px)',
-        borderBottom: '1px solid var(--color-border)',
-      }}
     >
-      <Toolbar sx={{ }}>
+      <Toolbar>
         <Box sx={{ minWidth: 0 }}>
           <Typography
             component={Link}

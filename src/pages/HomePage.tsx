@@ -37,11 +37,6 @@ function OptionSelect({
       select
       SelectProps={{ native: true }}
       size="small"
-      sx={{
-        '& .MuiInputBase-input': { color: 'var(--color-text)' },
-        '& .MuiInputLabel-root': { color: 'var(--color-text-muted)' },
-        '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--color-border)' },
-      }}
       value={value}
       onChange={(event) => onChange(event.target.value)}
     >
@@ -150,20 +145,17 @@ export function HomePage() {
       <Paper
         elevation={0}
         sx={{
-          background: 'var(--color-card)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 3,
-          boxShadow: 'var(--shadow-soft)',
           p: 3,
+          boxShadow: 1,
         }}
       >
         <Box sx={{ mb: 4, maxWidth: '48rem' }}>
           <Typography
-            sx={{
-              background: 'var(--color-accent-bg)',
-              border: '1px solid var(--color-accent-border)',
+            sx={(theme) => ({
+              backgroundColor: theme.palette.info.light,
+              border: `1px solid ${theme.palette.info.main}`,
               borderRadius: 999,
-              color: 'var(--color-accent-text)',
+              color: theme.palette.info.contrastText,
               display: 'inline-flex',
               fontSize: 12,
               fontWeight: 700,
@@ -172,14 +164,14 @@ export function HomePage() {
               px: 1.5,
               py: 0.5,
               textTransform: 'uppercase',
-            }}
+            })}
           >
             AI Article Generation
           </Typography>
           <Typography sx={{ fontSize: { sm: 38, xs: 30 }, fontWeight: 600, letterSpacing: '-0.02em' }}>
             {t('home.headline')}
           </Typography>
-          <Typography sx={{ color: 'var(--color-text-muted)', fontSize: 16, mt: 1.5 }}>
+          <Typography sx={{ color: 'text.secondary', fontSize: 16, mt: 1.5 }}>
             {t('home.subheadline')}
           </Typography>
         </Box>
@@ -189,11 +181,7 @@ export function HomePage() {
             fullWidth
             label={t('home.urlLabel')}
             placeholder={t('home.urlPlaceholder')}
-            sx={{
-              '& .MuiInputBase-input': { color: 'var(--color-text)', fontSize: 16, py: 1.9 },
-              '& .MuiInputLabel-root': { color: 'var(--color-text-muted)' },
-              '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--color-border)' },
-            }}
+            sx={{ '& .MuiInputBase-input': { fontSize: 16, py: 1.9 } }}
             value={youtubeUrl}
             onChange={(event) => {
               setYoutubeUrl(event.target.value)
@@ -210,12 +198,7 @@ export function HomePage() {
               {t('actions.aiGenerate')}
             </Button>
             <Button
-              sx={{
-                borderColor: 'var(--color-border)',
-                color: 'var(--color-text)',
-                px: 2.5,
-                py: 1.1,
-              }}
+              sx={{ px: 2.5, py: 1.1 }}
               type="button"
               variant="outlined"
               onClick={() => setAdvancedOpen((current) => !current)}
@@ -226,15 +209,14 @@ export function HomePage() {
 
           {error ? (
             <Typography
-              sx={{
-                background: 'var(--color-danger-bg)',
-                border: '1px solid var(--color-danger-border)',
-                borderRadius: 2,
-                color: 'var(--color-danger-text)',
+              sx={(theme) => ({
+                backgroundColor: theme.palette.error.light,
+                border: `1px solid ${theme.palette.error.main}`,
+                color: theme.palette.error.contrastText,
                 fontSize: 14,
                 px: 2,
                 py: 1.5,
-              }}
+              })}
             >
               {error}
             </Typography>
@@ -243,9 +225,9 @@ export function HomePage() {
           {advancedOpen ? (
             <Box
               sx={{
-                background: 'var(--color-card-soft)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 2,
+                backgroundColor: 'background.paper',
+                border: '1px solid',
+                borderColor: 'divider',
                 display: 'grid',
                 gap: 2,
                 gridTemplateColumns: { sm: 'repeat(2, minmax(0, 1fr))', xs: '1fr' },
@@ -294,9 +276,6 @@ export function HomePage() {
       <Paper
         elevation={0}
         sx={{
-          background: 'var(--color-card)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 3,
           p: 3,
         }}
       >
@@ -306,7 +285,7 @@ export function HomePage() {
 
         <Stack spacing={1.5}>
           {recentSessions.length === 0 ? (
-            <Typography sx={{ color: 'var(--color-text-subtle)', fontSize: 14 }}>
+            <Typography sx={{ color: 'text.secondary', fontSize: 14 }}>
               {t('home.noSessions')}
             </Typography>
           ) : (
@@ -315,12 +294,12 @@ export function HomePage() {
                 key={session.id}
                 sx={{
                   '&:hover': {
-                    background: 'color-mix(in srgb, var(--color-card-soft) 72%, var(--color-accent-bg) 28%)',
+                    backgroundColor: 'action.hover',
                   },
                   alignItems: 'flex-start',
-                  background: 'var(--color-card-soft)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 2,
+                  backgroundColor: 'background.paper',
+                  border: '1px solid',
+                  borderColor: 'divider',
                   display: 'flex',
                   gap: 1.5,
                   p: 2,
@@ -338,7 +317,7 @@ export function HomePage() {
                   <Box
                     sx={{
                       alignItems: 'center',
-                      color: 'var(--color-text-subtle)',
+                      color: 'text.secondary',
                       display: 'flex',
                       fontSize: 12,
                       gap: 1.5,
@@ -352,13 +331,8 @@ export function HomePage() {
                 </Box>
                 <Button
                   aria-label={t('actions.deleteSession')}
-                  sx={{
-                    background: 'var(--color-danger-bg)',
-                    borderColor: 'var(--color-danger-border)',
-                    color: 'var(--color-danger-text)',
-                    minWidth: 0,
-                    px: 1.1,
-                  }}
+                  color="error"
+                  sx={{ minWidth: 0, px: 1.1 }}
                   variant="outlined"
                   onClick={() => void handleDeleteSession(session.id)}
                 >
