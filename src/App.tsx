@@ -4,10 +4,10 @@ import { ThemeProvider } from '@mui/material/styles'
 import { useMemo } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { AppTopBar } from './components/AppTopBar'
+import { createAppTheme } from './config/theme'
 import { useThemePreference } from './hooks/useThemePreference'
 import { HomePage } from './pages/HomePage'
 import { SessionPage } from './pages/SessionPage'
-import { createAppTheme } from './theme/createAppTheme'
 
 function AppShell() {
   const { resolvedTheme, setThemePreference, themePreference } = useThemePreference()
