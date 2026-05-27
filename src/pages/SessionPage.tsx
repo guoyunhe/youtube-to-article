@@ -1,8 +1,11 @@
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import CircularProgress from '@mui/material/CircularProgress'
-import Alert from '@mui/material/Alert'
 import Paper from '@mui/material/Paper'
+import Step from '@mui/material/Step'
+import StepContent from '@mui/material/StepContent'
+import StepLabel from '@mui/material/StepLabel'
+import Stepper from '@mui/material/Stepper'
 import Typography from '@mui/material/Typography'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -26,6 +29,17 @@ type GenerateArticleStreamEvent =
   | { type: 'error'; error?: string }
 
 type GenerationStage = 'fetchingSubs' | 'generatingArticle'
+type StageErrorMap = Partial<Record<GenerationStage, string>>
+
+class GenerationRequestError extends Error {
+  stage: GenerationStage
+
+  constructor(stage: GenerationStage, message: string, options?: ErrorOptions) {
+    super(message, options)
+    this.name = 'GenerationRequestError'
+    this.stage = stage
+  }
+}
 
 function toPreview(text: string, max = 240): string {
   const compact = text.replace(/\s+/g, ' ').trim()
@@ -127,93 +141,113 @@ function deriveTitle(article: string): string {
 async function requestGeneration(
   session: SessionRecord,
   onStageChange: (stage: GenerationStage) => void,
+  onSubsFetched: (subs: FetchSubsResponse) => void,
   onDelta: (article: string) => void,
+  startFromStage: GenerationStage,
+  cachedSubs: FetchSubsResponse | null,
 ): Promise<GenerateArticleResponse> {
-  onStageChange('fetchingSubs')
+  let subs: FetchSubsResponse
 
-  const subs = await postJson<FetchSubsResponse>('/api/fetchSubs', {
-    youtubeUrl: session.youtubeUrl,
-  })
+  if (startFromStage === 'generatingArticle' && cachedSubs) {
+    subs = cachedSubs
+  } else {
+    onStageChange('fetchingSubs')
+
+    try {
+      subs = await postJson<FetchSubsResponse>('/api/fetchSubs', {
+        youtubeUrl: session.youtubeUrl,
+      })
+      onSubsFetched(subs)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to fetch captions.'
+      throw new GenerationRequestError('fetchingSubs', message, { cause: error })
+    }
+  }
 
   onStageChange('generatingArticle')
 
-  const response = await fetch('/api/generateArticle', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      transcript: subs.transcript,
-      options: session.options,
-    }),
-  })
-
-  if (!response.ok) {
-    await parseApiResponse<GenerateErrorPayload>(response, '/api/generateArticle')
-  }
-
-  if (!response.body) {
-    throw new Error('/api/generateArticle returned an empty response stream.')
-  }
-
-  const reader = response.body.getReader()
-  const decoder = new TextDecoder()
-  let pending = ''
-  let article = ''
-  let title = ''
-
   try {
-    while (true) {
-      const { done, value } = await reader.read()
+    const response = await fetch('/api/generateArticle', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        transcript: subs.transcript,
+        options: session.options,
+      }),
+    })
 
-      if (done) {
-        break
-      }
-
-      pending += decoder.decode(value, { stream: true })
-      const lines = pending.split('\n')
-      pending = lines.pop() ?? ''
-
-      for (const line of lines) {
-        const event = parseStreamLine(line)
-
-        if (!event) {
-          continue
-        }
-
-        if (event.type === 'delta') {
-          article += event.chunk
-          onDelta(article)
-          continue
-        }
-
-        if (event.type === 'done') {
-          title = event.title
-          continue
-        }
-
-        if (event.type === 'error') {
-          throw new Error(event.error ?? 'Unable to generate article.')
-        }
-      }
+    if (!response.ok) {
+      await parseApiResponse<GenerateErrorPayload>(response, '/api/generateArticle')
     }
-  } finally {
-    reader.releaseLock()
-  }
 
-  const finalArticle = article.trim()
+    if (!response.body) {
+      throw new Error('/api/generateArticle returned an empty response stream.')
+    }
 
-  if (!finalArticle) {
-    throw new Error('The AI returned an empty article.')
-  }
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let pending = ''
+    let article = ''
+    let title = ''
 
-  const finalTitle = title || deriveTitle(finalArticle)
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
 
-  return {
-    article: finalArticle,
-    title: finalTitle,
-    transcriptPreview: subs.transcriptPreview,
-    videoId: subs.videoId,
+        if (done) {
+          break
+        }
+
+        pending += decoder.decode(value, { stream: true })
+        const lines = pending.split('\n')
+        pending = lines.pop() ?? ''
+
+        for (const line of lines) {
+          const event = parseStreamLine(line)
+
+          if (!event) {
+            continue
+          }
+
+          if (event.type === 'delta') {
+            article += event.chunk
+            onDelta(article)
+            continue
+          }
+
+          if (event.type === 'done') {
+            title = event.title
+            continue
+          }
+
+          if (event.type === 'error') {
+            throw new Error(event.error ?? 'Unable to generate article.')
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock()
+    }
+
+    const finalArticle = article.trim()
+
+    if (!finalArticle) {
+      throw new Error('The AI returned an empty article.')
+    }
+
+    const finalTitle = title || deriveTitle(finalArticle)
+
+    return {
+      article: finalArticle,
+      title: finalTitle,
+      transcriptPreview: subs.transcriptPreview,
+      videoId: subs.videoId,
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unable to generate article.'
+    throw new GenerationRequestError('generatingArticle', message, { cause: error })
   }
 }
 
@@ -225,7 +259,9 @@ export function SessionPage() {
   const [loadError, setLoadError] = useState('')
   const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(null)
   const [generationStage, setGenerationStage] = useState<GenerationStage>('fetchingSubs')
+  const [stageErrors, setStageErrors] = useState<StageErrorMap>({})
   const [nowMs, setNowMs] = useState<number>(Date.now())
+  const lastFetchedSubs = useRef<FetchSubsResponse | null>(null)
   const autostarted = useRef(false)
 
   useEffect(() => {
@@ -247,6 +283,10 @@ export function SessionPage() {
       : 0
   const charsPerSecond = elapsedSeconds > 0 ? receivedChars / elapsedSeconds : 0
   const numberFormatter = new Intl.NumberFormat(i18n.resolvedLanguage ?? i18n.language)
+  const activeStep =
+    session?.status === 'completed' ? 2 : generationStage === 'fetchingSubs' ? 0 : 1
+  const isStageFlowVisible =
+    session?.status === 'generating' || session?.status === 'failed' || session?.status === 'completed'
 
   useEffect(() => {
     if (!sessionId) {
@@ -268,9 +308,22 @@ export function SessionPage() {
     await saveSession(nextSession)
   }
 
-  const generate = useCallback(async (currentSession: SessionRecord) => {
+  const generate = useCallback(async (
+    currentSession: SessionRecord,
+    startFromStage: GenerationStage = 'fetchingSubs',
+  ) => {
+    let activeStage: GenerationStage = startFromStage
+    const canResumeGenerate =
+      startFromStage === 'generatingArticle' && Boolean(lastFetchedSubs.current)
+    const effectiveStartStage: GenerationStage = canResumeGenerate ? 'generatingArticle' : 'fetchingSubs'
+
     setGenerationStartedAt(Date.now())
-    setGenerationStage('fetchingSubs')
+    setGenerationStage(effectiveStartStage)
+    setStageErrors({})
+
+    if (effectiveStartStage === 'fetchingSubs') {
+      lastFetchedSubs.current = null
+    }
 
     const generatingSession: SessionRecord = {
       ...currentSession,
@@ -284,7 +337,16 @@ export function SessionPage() {
     await persistSession(generatingSession)
 
     try {
-      const result = await requestGeneration(generatingSession, setGenerationStage, (article) => {
+      const result = await requestGeneration(
+        generatingSession,
+        (stage) => {
+          activeStage = stage
+          setGenerationStage(stage)
+        },
+        (subs) => {
+          lastFetchedSubs.current = subs
+        },
+        (article) => {
         setSession((previous) => {
           if (!previous || previous.id !== generatingSession.id) {
             return previous
@@ -296,7 +358,10 @@ export function SessionPage() {
             updatedAt: new Date().toISOString(),
           }
         })
-      })
+        },
+        effectiveStartStage,
+        lastFetchedSubs.current,
+      )
 
       await persistSession({
         ...generatingSession,
@@ -307,16 +372,22 @@ export function SessionPage() {
         videoId: result.videoId,
         updatedAt: new Date().toISOString(),
       })
+      setStageErrors({})
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to generate article.'
+      const failedStage = error instanceof GenerationRequestError ? error.stage : activeStage
+
+      setGenerationStage(failedStage)
+      setStageErrors({ [failedStage]: message })
+
       await persistSession({
         ...generatingSession,
         status: 'failed',
-        error: error instanceof Error ? error.message : 'Unable to generate article.',
+        error: message,
         updatedAt: new Date().toISOString(),
       })
     } finally {
       setGenerationStartedAt(null)
-      setGenerationStage('fetchingSubs')
     }
   }, [])
 
@@ -462,72 +533,64 @@ export function SessionPage() {
             </Box>
           </Box>
 
-          {session.status === 'generating' ? (
-            <Box sx={{ display: 'grid', gap: 1.2 }}>
-              <Alert
-                severity={generationStage === 'fetchingSubs' ? 'info' : 'success'}
-                variant="outlined"
-              >
-                <Box sx={{ display: 'grid', gap: 0.8 }}>
+          {isStageFlowVisible ? (
+            <Stepper activeStep={activeStep} orientation="vertical">
+              <Step completed={session.status === 'completed' || generationStage === 'generatingArticle'}>
+                <StepLabel error={Boolean(stageErrors.fetchingSubs)}>{t('session.stepFetchSubs')}</StepLabel>
+                <StepContent>
                   <Box sx={{ alignItems: 'center', display: 'flex', gap: 1 }}>
-                    <CircularProgress
-                      size={16}
-                      value={generationStage === 'fetchingSubs' ? undefined : 100}
-                      variant={generationStage === 'fetchingSubs' ? 'indeterminate' : 'determinate'}
-                    />
-                    <Typography sx={{ fontSize: 14, fontWeight: 500 }}>
-                      {t('session.stepFetchSubs')}
+                    {session.status === 'generating' && generationStage === 'fetchingSubs' ? (
+                      <CircularProgress size={16} />
+                    ) : null}
+                    <Typography sx={{ color: stageErrors.fetchingSubs ? 'error.main' : 'text.secondary', fontSize: 13 }}>
+                      {stageErrors.fetchingSubs
+                        ? stageErrors.fetchingSubs
+                        : generationStage === 'fetchingSubs' && session.status === 'generating'
+                          ? t('session.stageInProgress')
+                          : t('session.stageCompleted')}
                     </Typography>
                   </Box>
-                  <Typography sx={{ fontSize: 13 }}>
-                    {generationStage === 'fetchingSubs'
-                      ? t('session.stageInProgress')
-                      : t('session.stageCompleted')}
-                  </Typography>
-                </Box>
-              </Alert>
+                </StepContent>
+              </Step>
 
-              <Alert
-                severity={generationStage === 'generatingArticle' ? 'info' : 'warning'}
-                variant="outlined"
-              >
-                <Box sx={{ display: 'grid', gap: 0.8 }}>
-                  <Box sx={{ alignItems: 'center', display: 'flex', gap: 1 }}>
-                    <CircularProgress
-                      size={16}
-                      value={generationStage === 'generatingArticle' ? undefined : 0}
-                      variant={generationStage === 'generatingArticle' ? 'indeterminate' : 'determinate'}
-                    />
-                    <Typography sx={{ fontSize: 14, fontWeight: 500 }}>
-                      {t('session.stepGenerateArticle')}
-                    </Typography>
+              <Step completed={session.status === 'completed'}>
+                <StepLabel error={Boolean(stageErrors.generatingArticle)}>{t('session.stepGenerateArticle')}</StepLabel>
+                <StepContent>
+                  <Box sx={{ display: 'grid', gap: 0.8 }}>
+                    <Box sx={{ alignItems: 'center', display: 'flex', gap: 1 }}>
+                      {session.status === 'generating' && generationStage === 'generatingArticle' ? (
+                        <CircularProgress size={16} />
+                      ) : null}
+                      <Typography sx={{ color: stageErrors.generatingArticle ? 'error.main' : 'text.secondary', fontSize: 13 }}>
+                        {stageErrors.generatingArticle
+                          ? stageErrors.generatingArticle
+                          : generationStage === 'generatingArticle' && session.status === 'generating'
+                            ? t('session.stageInProgress')
+                            : t('session.stagePending')}
+                      </Typography>
+                    </Box>
+                    {session.status === 'generating' && generationStage === 'generatingArticle' ? (
+                      <>
+                        <Typography sx={{ fontSize: 13 }}>
+                          {t('session.streamingProgress')}:{' '}
+                          {t('session.receivedChars', {
+                            count: numberFormatter.format(receivedChars),
+                          })}
+                        </Typography>
+                        <Typography sx={{ fontSize: 13 }}>
+                          {t('session.generationSpeed', {
+                            speed: numberFormatter.format(Number(charsPerSecond.toFixed(1))),
+                          })}
+                        </Typography>
+                      </>
+                    ) : null}
                   </Box>
-                  <Typography sx={{ fontSize: 13 }}>
-                    {generationStage === 'generatingArticle'
-                      ? t('session.stageInProgress')
-                      : t('session.stagePending')}
-                  </Typography>
-                  {generationStage === 'generatingArticle' ? (
-                    <>
-                      <Typography sx={{ fontSize: 13 }}>
-                        {t('session.streamingProgress')}:{' '}
-                        {t('session.receivedChars', {
-                          count: numberFormatter.format(receivedChars),
-                        })}
-                      </Typography>
-                      <Typography sx={{ fontSize: 13 }}>
-                        {t('session.generationSpeed', {
-                          speed: numberFormatter.format(Number(charsPerSecond.toFixed(1))),
-                        })}
-                      </Typography>
-                    </>
-                  ) : null}
-                </Box>
-              </Alert>
-            </Box>
+                </StepContent>
+              </Step>
+            </Stepper>
           ) : null}
 
-          {session.error ? (
+          {session.error && !stageErrors.fetchingSubs && !stageErrors.generatingArticle ? (
             <Box
               sx={{
                 backgroundColor: 'error.light',
@@ -544,7 +607,15 @@ export function SessionPage() {
           ) : null}
 
           {(session.status === 'failed' || session.status === 'completed') && (
-            <Button variant="contained" onClick={() => void generate(session)}>
+            <Button
+              variant="contained"
+              onClick={() =>
+                void generate(
+                  session,
+                  stageErrors.generatingArticle ? 'generatingArticle' : 'fetchingSubs',
+                )
+              }
+            >
               {t('actions.retry')}
             </Button>
           )}
