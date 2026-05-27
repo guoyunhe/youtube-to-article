@@ -11,6 +11,7 @@ export interface GenerationOptions {
   outputStyle: string
   targetReaders: string
   outputLanguage: 'en' | 'zh'
+  customPrompt: string
 }
 
 export interface FetchSubsRequestBody {

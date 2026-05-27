@@ -6,6 +6,9 @@ function buildPrompt(options: GenerationOptions, transcript: string): string {
     options.outputLanguage === 'zh'
       ? 'Write the response in Simplified Chinese.'
       : 'Write the response in English.'
+  const customPromptInstruction = options.customPrompt
+    ? `- Additional user instructions: ${options.customPrompt}`
+    : ''
 
   return `
 You are generating an article from a YouTube video transcript.
@@ -15,6 +18,7 @@ Requirements:
 - Output style: ${options.outputStyle}
 - Target readers: ${options.targetReaders}
 - ${languageInstruction}
+${customPromptInstruction}
 - Produce a clear title on the first line.
 - Then write a polished article with sections, short paragraphs, and actionable takeaways.
 - Base the article only on the transcript content. If something is unclear, acknowledge uncertainty instead of inventing details.

@@ -3,6 +3,7 @@ export interface GenerationOptions {
   outputStyle: string
   targetReaders: string
   outputLanguage: 'en' | 'zh'
+  customPrompt: string
 }
 
 export type SessionStatus = 'queued' | 'generating' | 'completed' | 'failed'

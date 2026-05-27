@@ -5,15 +5,10 @@ import type { FormEvent } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { HomeAdvancedOptionsPanel } from '../components/HomeAdvancedOptionsPanel'
 import { HomeUrlInputSection } from '../components/HomeUrlInputSection'
 import { SessionList } from '../components/SessionList'
 import { defaultOptions } from '../lib/defaults'
-import {
-  getInitialOutputLanguage,
-  normalizeLanguage,
-  persistOutputLanguage,
-} from '../lib/language'
+import { normalizeLanguage } from '../lib/language'
 import { deleteSession, listSessions, saveSession } from '../lib/sessionStore'
 import { extractVideoId } from '../lib/youtube'
 import type { GenerationOptions, SessionRecord } from '../types'
@@ -24,11 +19,10 @@ export function HomePage() {
   const detectedLanguage = normalizeLanguage(i18n.resolvedLanguage ?? i18n.language)
   const [youtubeUrl, setYoutubeUrl] = useState('')
   const [error, setError] = useState('')
-  const [advancedOpen, setAdvancedOpen] = useState(false)
   const [recentSessions, setRecentSessions] = useState<SessionRecord[]>([])
   const [options, setOptions] = useState<GenerationOptions>({
     ...defaultOptions,
-    outputLanguage: getInitialOutputLanguage(detectedLanguage),
+    outputLanguage: detectedLanguage,
   })
 
   useEffect(() => {
@@ -59,14 +53,6 @@ export function HomePage() {
     ],
     [t],
   )
-  const outputLanguageOptions = useMemo(
-    () => [
-      { value: 'en', label: t('optionValues.english') },
-      { value: 'zh', label: t('optionValues.chinese') },
-    ],
-    [t],
-  )
-
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
@@ -84,7 +70,10 @@ export function HomePage() {
       videoId,
       createdAt: now,
       updatedAt: now,
-      options,
+      options: {
+        ...options,
+        outputLanguage: detectedLanguage,
+      },
       status: 'queued',
     }
 
@@ -147,43 +136,28 @@ export function HomePage() {
 
         <Box component="form" sx={{ display: 'grid', gap: 2.5 }} onSubmit={(event) => void handleSubmit(event)}>
           <HomeUrlInputSection
-            advancedOptionsLabel={t('actions.advancedOptions')}
             error={error}
             generateLabel={t('actions.aiGenerate')}
-            urlLabel={t('home.urlLabel')}
-            urlPlaceholder={t('home.urlPlaceholder')}
-            youtubeUrl={youtubeUrl}
-            onToggleAdvanced={() => setAdvancedOpen((current) => !current)}
-            onYoutubeUrlChange={(value) => {
-              setYoutubeUrl(value)
-              setError('')
-            }}
-          />
-
-          <HomeAdvancedOptionsPanel
-            open={advancedOpen}
             options={options}
-            outputLanguageLabel={t('options.outputLanguage')}
-            outputLanguageOptions={outputLanguageOptions}
             outputStyleLabel={t('options.outputStyle')}
             outputStyleOptions={outputStyleOptions}
             targetReadersLabel={t('options.targetReaders')}
             targetReadersOptions={targetReadersOptions}
             taskTypeLabel={t('options.taskType')}
             taskTypeOptions={taskTypeOptions}
-            onOutputLanguageChange={(outputLanguage) =>
-              setOptions((current) => {
-                persistOutputLanguage(outputLanguage)
-
-                return {
-                  ...current,
-                  outputLanguage,
-                }
-              })
-            }
+            customPromptLabel={t('options.customPrompt')}
+            customPromptPlaceholder={t('home.customPromptPlaceholder')}
+            urlLabel={t('home.urlLabel')}
+            urlPlaceholder={t('home.urlPlaceholder')}
+            youtubeUrl={youtubeUrl}
+            onCustomPromptChange={(customPrompt) => setOptions((current) => ({ ...current, customPrompt }))}
             onOutputStyleChange={(outputStyle) => setOptions((current) => ({ ...current, outputStyle }))}
             onTargetReadersChange={(targetReaders) => setOptions((current) => ({ ...current, targetReaders }))}
             onTaskTypeChange={(taskType) => setOptions((current) => ({ ...current, taskType }))}
+            onYoutubeUrlChange={(value) => {
+              setYoutubeUrl(value)
+              setError('')
+            }}
           />
         </Box>
       </Paper>

@@ -5,4 +5,5 @@ export const defaultOptions: GenerationOptions = {
   outputStyle: 'professional',
   targetReaders: 'beginners',
   outputLanguage: 'en',
+  customPrompt: '',
 }

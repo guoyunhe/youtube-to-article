@@ -28,6 +28,7 @@ function parseOptions(options: unknown): GenerationOptions {
     outputStyle: String(raw.outputStyle ?? 'professional'),
     targetReaders: String(raw.targetReaders ?? 'beginners'),
     outputLanguage: raw.outputLanguage === 'zh' ? 'zh' : 'en',
+    customPrompt: typeof raw.customPrompt === 'string' ? raw.customPrompt.trim() : '',
   }
 }
 

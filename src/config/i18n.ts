@@ -21,6 +21,7 @@ const resources = {
           'Drop in a video link, choose how the article should be written, and let AI draft it from the video captions.',
         urlLabel: 'YouTube URL',
         urlPlaceholder: 'https://www.youtube.com/watch?v=...',
+        customPromptPlaceholder: 'Optional: add extra instructions, tone preferences, structure requirements, or constraints.',
         recentSessions: 'Recent local sessions',
         noSessions: 'No local sessions yet. Generated sessions will be stored in IndexedDB.',
       },
@@ -42,6 +43,7 @@ const resources = {
         outputStyle: 'Output style',
         targetReaders: 'Target readers',
         outputLanguage: 'Output language',
+        customPrompt: 'Custom prompt',
       },
       statuses: {
         queued: 'Queued',
@@ -92,6 +94,7 @@ const resources = {
         subheadline: '输入视频地址，选择输出方式，然后让 AI 基于视频字幕生成文章。',
         urlLabel: 'YouTube 链接',
         urlPlaceholder: 'https://www.youtube.com/watch?v=...',
+        customPromptPlaceholder: '可选：补充额外要求，例如语气、结构、重点和限制条件。',
         recentSessions: '本地历史会话',
         noSessions: '暂时没有本地历史。生成后的会话会保存到 IndexedDB。',
       },
@@ -113,6 +116,7 @@ const resources = {
         outputStyle: '输出风格',
         targetReaders: '目标读者',
         outputLanguage: '输出语言',
+        customPrompt: '自定义提示词',
       },
       statuses: {
         queued: '排队中',

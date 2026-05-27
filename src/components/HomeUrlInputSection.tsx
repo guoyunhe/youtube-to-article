@@ -1,29 +1,83 @@
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
+import type { GenerationOptions } from '../types'
+
+type SelectOption = { value: string; label: string }
+
+function OptionSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string
+  value: string
+  options: SelectOption[]
+  onChange: (value: string) => void
+}) {
+  return (
+    <TextField
+      fullWidth
+      label={label}
+      select
+      SelectProps={{ native: true }}
+      size="small"
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+    >
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </TextField>
+  )
+}
 
 type HomeUrlInputSectionProps = {
   youtubeUrl: string
   error: string
+  options: GenerationOptions
   urlLabel: string
   urlPlaceholder: string
   generateLabel: string
-  advancedOptionsLabel: string
+  taskTypeLabel: string
+  outputStyleLabel: string
+  targetReadersLabel: string
+  customPromptLabel: string
+  customPromptPlaceholder: string
+  taskTypeOptions: SelectOption[]
+  outputStyleOptions: SelectOption[]
+  targetReadersOptions: SelectOption[]
   onYoutubeUrlChange: (value: string) => void
-  onToggleAdvanced: () => void
+  onTaskTypeChange: (value: string) => void
+  onOutputStyleChange: (value: string) => void
+  onTargetReadersChange: (value: string) => void
+  onCustomPromptChange: (value: string) => void
 }
 
 export function HomeUrlInputSection({
   youtubeUrl,
   error,
+  options,
   urlLabel,
   urlPlaceholder,
   generateLabel,
-  advancedOptionsLabel,
+  taskTypeLabel,
+  outputStyleLabel,
+  targetReadersLabel,
+  customPromptLabel,
+  customPromptPlaceholder,
+  taskTypeOptions,
+  outputStyleOptions,
+  targetReadersOptions,
   onYoutubeUrlChange,
-  onToggleAdvanced,
+  onTaskTypeChange,
+  onOutputStyleChange,
+  onTargetReadersChange,
+  onCustomPromptChange,
 }: HomeUrlInputSectionProps) {
   return (
     <>
@@ -36,23 +90,54 @@ export function HomeUrlInputSection({
         onChange={(event) => onYoutubeUrlChange(event.target.value)}
       />
 
-      <Stack direction={{ sm: 'row', xs: 'column' }} spacing={1.5}>
-        <Button
-          sx={{ px: 2.5, py: 1.1 }}
-          type="submit"
-          variant="contained"
-        >
-          {generateLabel}
-        </Button>
-        <Button
-          sx={{ px: 2.5, py: 1.1 }}
-          type="button"
-          variant="outlined"
-          onClick={onToggleAdvanced}
-        >
-          {advancedOptionsLabel}
-        </Button>
-      </Stack>
+      <Box
+        sx={{
+          backgroundColor: 'background.paper',
+          border: '1px solid',
+          borderColor: 'divider',
+          display: 'grid',
+          gap: 2,
+          gridTemplateColumns: { sm: 'repeat(2, minmax(0, 1fr))', xs: '1fr' },
+          p: 2,
+        }}
+      >
+        <OptionSelect
+          label={taskTypeLabel}
+          options={taskTypeOptions}
+          value={options.taskType}
+          onChange={onTaskTypeChange}
+        />
+        <OptionSelect
+          label={outputStyleLabel}
+          options={outputStyleOptions}
+          value={options.outputStyle}
+          onChange={onOutputStyleChange}
+        />
+        <OptionSelect
+          label={targetReadersLabel}
+          options={targetReadersOptions}
+          value={options.targetReaders}
+          onChange={onTargetReadersChange}
+        />
+        <TextField
+          fullWidth
+          label={customPromptLabel}
+          minRows={3}
+          multiline
+          placeholder={customPromptPlaceholder}
+          sx={{ gridColumn: { sm: '1 / -1', xs: 'auto' } }}
+          value={options.customPrompt}
+          onChange={(event) => onCustomPromptChange(event.target.value)}
+        />
+      </Box>
+
+      <Button
+        sx={{ px: 2.5, py: 1.1, width: { sm: 'fit-content', xs: '100%' } }}
+        type="submit"
+        variant="contained"
+      >
+        {generateLabel}
+      </Button>
 
       {error ? (
         <Typography
