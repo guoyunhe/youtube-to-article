@@ -97,7 +97,7 @@ export function HomeUrlInputSection({
           borderColor: 'divider',
           display: 'grid',
           gap: 2,
-          gridTemplateColumns: { sm: 'repeat(2, minmax(0, 1fr))', xs: '1fr' },
+          gridTemplateColumns: { md: 'repeat(3, minmax(0, 1fr))', xs: '1fr' },
           p: 2,
         }}
       >
@@ -125,7 +125,7 @@ export function HomeUrlInputSection({
           minRows={3}
           multiline
           placeholder={customPromptPlaceholder}
-          sx={{ gridColumn: { sm: '1 / -1', xs: 'auto' } }}
+          sx={{ gridColumn: { md: '1 / -1', xs: 'auto' } }}
           value={options.customPrompt}
           onChange={(event) => onCustomPromptChange(event.target.value)}
         />
