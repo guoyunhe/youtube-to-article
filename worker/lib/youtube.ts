@@ -6,6 +6,12 @@ interface CaptionTrack {
 
 const youtubeHosts = new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com'])
 const shortHosts = new Set(['youtu.be', 'www.youtu.be'])
+const youtubeVideoIdPattern = /^[A-Za-z0-9_-]{11}$/
+
+function normalizeVideoId(raw: string | null): string | null {
+  const candidate = raw?.trim() ?? ''
+  return youtubeVideoIdPattern.test(candidate) ? candidate : null
+}
 
 export function extractVideoId(input: string): string | null {
   try {
@@ -14,16 +20,16 @@ export function extractVideoId(input: string): string | null {
 
     if (youtubeHosts.has(hostname)) {
       if (url.pathname === '/watch') {
-        return url.searchParams.get('v')
+        return normalizeVideoId(url.searchParams.get('v'))
       }
 
       if (url.pathname.startsWith('/shorts/')) {
-        return url.pathname.split('/')[2] ?? null
+        return normalizeVideoId(url.pathname.split('/')[2] ?? null)
       }
     }
 
     if (shortHosts.has(hostname)) {
-      return url.pathname.replaceAll('/', '') || null
+      return normalizeVideoId(url.pathname.replaceAll('/', '') || null)
     }
   } catch {
     return null

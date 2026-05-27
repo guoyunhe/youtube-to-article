@@ -1,7 +1,6 @@
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import TextField from '@mui/material/TextField'
-import Typography from '@mui/material/Typography'
 import type { GenerationOptions } from '../types'
 
 type SelectOption = { value: string; label: string }
@@ -38,7 +37,7 @@ function OptionSelect({
 
 type HomeUrlInputSectionProps = {
   youtubeUrl: string
-  error: string
+  youtubeUrlError: string
   options: GenerationOptions
   urlLabel: string
   urlPlaceholder: string
@@ -52,6 +51,7 @@ type HomeUrlInputSectionProps = {
   outputStyleOptions: SelectOption[]
   targetReadersOptions: SelectOption[]
   onYoutubeUrlChange: (value: string) => void
+  onYoutubeUrlBlur: () => void
   onTaskTypeChange: (value: string) => void
   onOutputStyleChange: (value: string) => void
   onTargetReadersChange: (value: string) => void
@@ -60,7 +60,7 @@ type HomeUrlInputSectionProps = {
 
 export function HomeUrlInputSection({
   youtubeUrl,
-  error,
+  youtubeUrlError,
   options,
   urlLabel,
   urlPlaceholder,
@@ -74,6 +74,7 @@ export function HomeUrlInputSection({
   outputStyleOptions,
   targetReadersOptions,
   onYoutubeUrlChange,
+  onYoutubeUrlBlur,
   onTaskTypeChange,
   onOutputStyleChange,
   onTargetReadersChange,
@@ -82,11 +83,14 @@ export function HomeUrlInputSection({
   return (
     <>
       <TextField
+        error={Boolean(youtubeUrlError)}
         fullWidth
+        helperText={youtubeUrlError}
         label={urlLabel}
         placeholder={urlPlaceholder}
         sx={{ '& .MuiInputBase-input': { fontSize: 16, py: 1.9 } }}
         value={youtubeUrl}
+        onBlur={onYoutubeUrlBlur}
         onChange={(event) => onYoutubeUrlChange(event.target.value)}
       />
 
@@ -138,21 +142,6 @@ export function HomeUrlInputSection({
       >
         {generateLabel}
       </Button>
-
-      {error ? (
-        <Typography
-          sx={(theme) => ({
-            backgroundColor: theme.palette.error.light,
-            border: `1px solid ${theme.palette.error.main}`,
-            color: theme.palette.error.contrastText,
-            fontSize: 14,
-            px: 2,
-            py: 1.5,
-          })}
-        >
-          {error}
-        </Typography>
-      ) : null}
     </>
   )
 }

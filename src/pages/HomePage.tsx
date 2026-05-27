@@ -10,7 +10,7 @@ import { SessionList } from '../components/SessionList'
 import { defaultOptions } from '../lib/defaults'
 import { normalizeLanguage } from '../lib/language'
 import { deleteSession, listSessions, saveSession } from '../lib/sessionStore'
-import { extractVideoId } from '../lib/youtube'
+import { extractVideoId, isValidYouTubeUrl } from '../lib/youtube'
 import type { GenerationOptions, SessionRecord } from '../types'
 
 export function HomePage() {
@@ -18,12 +18,16 @@ export function HomePage() {
   const { t, i18n } = useTranslation()
   const detectedLanguage = normalizeLanguage(i18n.resolvedLanguage ?? i18n.language)
   const [youtubeUrl, setYoutubeUrl] = useState('')
-  const [error, setError] = useState('')
+  const [youtubeUrlTouched, setYoutubeUrlTouched] = useState(false)
   const [recentSessions, setRecentSessions] = useState<SessionRecord[]>([])
   const [options, setOptions] = useState<GenerationOptions>({
     ...defaultOptions,
     outputLanguage: detectedLanguage,
   })
+  const youtubeUrlError =
+    youtubeUrlTouched && youtubeUrl.trim() && !isValidYouTubeUrl(youtubeUrl)
+      ? t('validation.invalidYoutubeUrl')
+      : ''
 
   useEffect(() => {
     void listSessions().then(setRecentSessions)
@@ -55,11 +59,15 @@ export function HomePage() {
   )
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    setYoutubeUrlTouched(true)
+
+    if (!isValidYouTubeUrl(youtubeUrl)) {
+      return
+    }
 
     const videoId = extractVideoId(youtubeUrl)
 
     if (!videoId) {
-      setError(t('validation.invalidYoutubeUrl'))
       return
     }
 
@@ -136,7 +144,6 @@ export function HomePage() {
 
         <Box component="form" sx={{ display: 'grid', gap: 2.5 }} onSubmit={(event) => void handleSubmit(event)}>
           <HomeUrlInputSection
-            error={error}
             generateLabel={t('actions.aiGenerate')}
             options={options}
             outputStyleLabel={t('options.outputStyle')}
@@ -150,13 +157,14 @@ export function HomePage() {
             urlLabel={t('home.urlLabel')}
             urlPlaceholder={t('home.urlPlaceholder')}
             youtubeUrl={youtubeUrl}
+            youtubeUrlError={youtubeUrlError}
             onCustomPromptChange={(customPrompt) => setOptions((current) => ({ ...current, customPrompt }))}
             onOutputStyleChange={(outputStyle) => setOptions((current) => ({ ...current, outputStyle }))}
             onTargetReadersChange={(targetReaders) => setOptions((current) => ({ ...current, targetReaders }))}
             onTaskTypeChange={(taskType) => setOptions((current) => ({ ...current, taskType }))}
+            onYoutubeUrlBlur={() => setYoutubeUrlTouched(true)}
             onYoutubeUrlChange={(value) => {
               setYoutubeUrl(value)
-              setError('')
             }}
           />
         </Box>
