@@ -1,6 +1,7 @@
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import CircularProgress from '@mui/material/CircularProgress'
+import Alert from '@mui/material/Alert'
 import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -23,6 +24,8 @@ type GenerateArticleStreamEvent =
   | { type: 'delta'; chunk: string }
   | { type: 'done'; title: string }
   | { type: 'error'; error?: string }
+
+type GenerationStage = 'fetchingSubs' | 'generatingArticle'
 
 function toPreview(text: string, max = 240): string {
   const compact = text.replace(/\s+/g, ' ').trim()
@@ -123,11 +126,16 @@ function deriveTitle(article: string): string {
 
 async function requestGeneration(
   session: SessionRecord,
+  onStageChange: (stage: GenerationStage) => void,
   onDelta: (article: string) => void,
 ): Promise<GenerateArticleResponse> {
+  onStageChange('fetchingSubs')
+
   const subs = await postJson<FetchSubsResponse>('/api/fetchSubs', {
     youtubeUrl: session.youtubeUrl,
   })
+
+  onStageChange('generatingArticle')
 
   const response = await fetch('/api/generateArticle', {
     method: 'POST',
@@ -216,6 +224,7 @@ export function SessionPage() {
   const [session, setSession] = useState<SessionRecord | null>(null)
   const [loadError, setLoadError] = useState('')
   const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(null)
+  const [generationStage, setGenerationStage] = useState<GenerationStage>('fetchingSubs')
   const [nowMs, setNowMs] = useState<number>(Date.now())
   const autostarted = useRef(false)
 
@@ -261,6 +270,7 @@ export function SessionPage() {
 
   const generate = useCallback(async (currentSession: SessionRecord) => {
     setGenerationStartedAt(Date.now())
+    setGenerationStage('fetchingSubs')
 
     const generatingSession: SessionRecord = {
       ...currentSession,
@@ -274,7 +284,7 @@ export function SessionPage() {
     await persistSession(generatingSession)
 
     try {
-      const result = await requestGeneration(generatingSession, (article) => {
+      const result = await requestGeneration(generatingSession, setGenerationStage, (article) => {
         setSession((previous) => {
           if (!previous || previous.id !== generatingSession.id) {
             return previous
@@ -306,6 +316,7 @@ export function SessionPage() {
       })
     } finally {
       setGenerationStartedAt(null)
+      setGenerationStage('fetchingSubs')
     }
   }, [])
 
@@ -452,31 +463,67 @@ export function SessionPage() {
           </Box>
 
           {session.status === 'generating' ? (
-            <Box
-              sx={{
-                backgroundColor: 'info.light',
-                border: '1px solid',
-                borderColor: 'info.main',
-                color: 'info.contrastText',
-                display: 'grid',
-                fontSize: 14,
-                gap: 1,
-                px: 2,
-                py: 1.5,
-              }}
-            >
-              <Box sx={{ alignItems: 'center', display: 'flex', gap: 1 }}>
-                <CircularProgress size={18} />
-                <span>{t('session.generating')}</span>
-              </Box>
-              <Typography sx={{ fontSize: 13, opacity: 0.92 }}>
-                {t('session.streamingProgress')}: {t('session.receivedChars', { count: numberFormatter.format(receivedChars) })}
-              </Typography>
-              <Typography sx={{ fontSize: 13, opacity: 0.92 }}>
-                {t('session.generationSpeed', {
-                  speed: numberFormatter.format(Number(charsPerSecond.toFixed(1))),
-                })}
-              </Typography>
+            <Box sx={{ display: 'grid', gap: 1.2 }}>
+              <Alert
+                severity={generationStage === 'fetchingSubs' ? 'info' : 'success'}
+                variant="outlined"
+              >
+                <Box sx={{ display: 'grid', gap: 0.8 }}>
+                  <Box sx={{ alignItems: 'center', display: 'flex', gap: 1 }}>
+                    <CircularProgress
+                      size={16}
+                      value={generationStage === 'fetchingSubs' ? undefined : 100}
+                      variant={generationStage === 'fetchingSubs' ? 'indeterminate' : 'determinate'}
+                    />
+                    <Typography sx={{ fontSize: 14, fontWeight: 500 }}>
+                      {t('session.stepFetchSubs')}
+                    </Typography>
+                  </Box>
+                  <Typography sx={{ fontSize: 13 }}>
+                    {generationStage === 'fetchingSubs'
+                      ? t('session.stageInProgress')
+                      : t('session.stageCompleted')}
+                  </Typography>
+                </Box>
+              </Alert>
+
+              <Alert
+                severity={generationStage === 'generatingArticle' ? 'info' : 'warning'}
+                variant="outlined"
+              >
+                <Box sx={{ display: 'grid', gap: 0.8 }}>
+                  <Box sx={{ alignItems: 'center', display: 'flex', gap: 1 }}>
+                    <CircularProgress
+                      size={16}
+                      value={generationStage === 'generatingArticle' ? undefined : 0}
+                      variant={generationStage === 'generatingArticle' ? 'indeterminate' : 'determinate'}
+                    />
+                    <Typography sx={{ fontSize: 14, fontWeight: 500 }}>
+                      {t('session.stepGenerateArticle')}
+                    </Typography>
+                  </Box>
+                  <Typography sx={{ fontSize: 13 }}>
+                    {generationStage === 'generatingArticle'
+                      ? t('session.stageInProgress')
+                      : t('session.stagePending')}
+                  </Typography>
+                  {generationStage === 'generatingArticle' ? (
+                    <>
+                      <Typography sx={{ fontSize: 13 }}>
+                        {t('session.streamingProgress')}:{' '}
+                        {t('session.receivedChars', {
+                          count: numberFormatter.format(receivedChars),
+                        })}
+                      </Typography>
+                      <Typography sx={{ fontSize: 13 }}>
+                        {t('session.generationSpeed', {
+                          speed: numberFormatter.format(Number(charsPerSecond.toFixed(1))),
+                        })}
+                      </Typography>
+                    </>
+                  ) : null}
+                </Box>
+              </Alert>
             </Box>
           ) : null}
 
