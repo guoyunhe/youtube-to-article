@@ -7,7 +7,6 @@ CREATE TABLE IF NOT EXISTS sessions (
   transcript TEXT,
   transcript_preview TEXT,
   captions_json TEXT,
-  article TEXT,
   title TEXT,
   error TEXT,
   created_at TEXT NOT NULL,

@@ -10,9 +10,20 @@ type StoredSessionRow = {
   transcript: string | null
   transcript_preview: string | null
   captions_json: string | null
-  article: string | null
   title: string | null
   error: string | null
+  created_at: string
+  updated_at: string
+}
+
+type StoredSectionRow = {
+  id: string
+  session_id: string
+  parent_id: string | null
+  depth: number
+  position: number
+  title: string
+  content: string
   created_at: string
   updated_at: string
 }
@@ -28,9 +39,11 @@ type TestEnv = {
 
 class InMemoryD1 {
   private sessions = new Map<string, StoredSessionRow>()
+  private sections = new Map<string, StoredSectionRow>()
 
   reset() {
     this.sessions.clear()
+    this.sections.clear()
   }
 
   prepare(query: string) {
@@ -49,14 +62,43 @@ class InMemoryD1 {
               transcript: (params[5] as string | null) ?? null,
               transcript_preview: (params[6] as string | null) ?? null,
               captions_json: (params[7] as string | null) ?? null,
-              article: (params[8] as string | null) ?? null,
-              title: (params[9] as string | null) ?? null,
-              error: (params[10] as string | null) ?? null,
-              created_at: String(params[11]),
-              updated_at: String(params[12]),
+              title: (params[8] as string | null) ?? null,
+              error: (params[9] as string | null) ?? null,
+              created_at: String(params[10]),
+              updated_at: String(params[11]),
             }
             this.sessions.set(row.id, row)
             return { meta: { changes: 1 } }
+          }
+
+          if (normalized.includes('insert into sections')) {
+            const row: StoredSectionRow = {
+              id: String(params[0]),
+              session_id: String(params[1]),
+              parent_id: (params[2] as string | null) ?? null,
+              depth: Number(params[3]),
+              position: Number(params[4]),
+              title: String(params[5]),
+              content: String(params[6]),
+              created_at: String(params[7]),
+              updated_at: String(params[8]),
+            }
+            this.sections.set(row.id, row)
+            return { meta: { changes: 1 } }
+          }
+
+          if (normalized.startsWith('delete from sections where session_id = ?')) {
+            const sessionId = String(params[0])
+            let deleted = 0
+
+            for (const [id, row] of this.sections.entries()) {
+              if (row.session_id === sessionId) {
+                this.sections.delete(id)
+                deleted += 1
+              }
+            }
+
+            return { meta: { changes: deleted } }
           }
 
           if (normalized.startsWith('delete from sessions where id = ?')) {
@@ -81,6 +123,14 @@ class InMemoryD1 {
             const rows = Array.from(this.sessions.values())
               .sort((left, right) => right.updated_at.localeCompare(left.updated_at))
               .slice(0, Math.max(1, limit))
+            return { results: rows as T[] }
+          }
+
+          if (normalized.includes('from sections') && normalized.includes('where session_id = ?')) {
+            const sessionId = String(params[0])
+            const rows = Array.from(this.sections.values())
+              .filter((row) => row.session_id === sessionId)
+              .sort((left, right) => left.position - right.position)
             return { results: rows as T[] }
           }
 

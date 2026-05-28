@@ -21,6 +21,16 @@ export interface CaptionSegment {
   text: string
 }
 
+export interface SessionSection {
+  id: string
+  parentId: string | null
+  title: string
+  content: string
+  depth: number
+  position: number
+  children: SessionSection[]
+}
+
 export type SessionStatus = 'queued' | 'generating' | 'completed' | 'failed'
 
 export interface SessionRecord {
@@ -34,6 +44,7 @@ export interface SessionRecord {
   transcript?: string
   title?: string
   article?: string
+  sections?: SessionSection[]
   transcriptPreview?: string
   captions?: CaptionSegment[]
   error?: string

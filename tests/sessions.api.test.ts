@@ -35,7 +35,7 @@ describe('sessions API', () => {
           transcript: 'full transcript',
           transcriptPreview: 'preview',
           captions: [{ startMs: 0, durationMs: 1000, text: 'hello' }],
-          article: 'generated article body',
+          article: '# Intro\nOverview\n## Detail\nDeep dive',
           title: 'generated article title',
         },
       }),
@@ -57,12 +57,21 @@ describe('sessions API', () => {
       id: string
       transcript?: string
       article?: string
+      sections?: Array<{
+        title: string
+        content: string
+        children: Array<{ title: string; content: string }>
+      }>
       options: { customPrompt: string }
       captions?: Array<{ text: string }>
     }
     expect(getPayload.id).toBe(created.id)
     expect(getPayload.transcript).toBe('full transcript')
-    expect(getPayload.article).toBe('generated article body')
+    expect(getPayload.article).toBe('# Intro\nOverview\n## Detail\nDeep dive')
+    expect(getPayload.sections?.[0]?.title).toBe('Intro')
+    expect(getPayload.sections?.[0]?.content).toBe('Overview')
+    expect(getPayload.sections?.[0]?.children?.[0]?.title).toBe('Detail')
+    expect(getPayload.sections?.[0]?.children?.[0]?.content).toBe('Deep dive')
     expect(getPayload.options.customPrompt).toBe('focus on key points')
     expect(getPayload.captions?.[0]?.text).toBe('hello')
 
