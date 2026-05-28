@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanupWorkerTestGlobals, postJson, postRawJson } from './helpers/workerTestUtils'
 
 afterEach(() => {
@@ -10,6 +10,62 @@ describe('fetchSubs API', () => {
     'POST /api/fetchSubs returns transcript from YouTube',
     { timeout: 15000 },
     async () => {
+      const externalFetch = vi.fn(async (input: RequestInfo | URL) => {
+        const url = input instanceof Request ? input.url : String(input)
+
+        if (url === 'https://www.youtube.com/youtubei/v1/player') {
+          return new Response(
+            JSON.stringify({
+              captions: {
+                playerCaptionsTracklistRenderer: {
+                  captionTracks: [
+                    {
+                      baseUrl: 'https://example.test/captions?lang=en',
+                      languageCode: 'en',
+                    },
+                  ],
+                },
+              },
+            }),
+            {
+              status: 200,
+              headers: {
+                'content-type': 'application/json',
+              },
+            },
+          )
+        }
+
+        if (url.startsWith('https://example.test/captions?lang=en&fmt=json3')) {
+          return new Response(
+            JSON.stringify({
+              events: [
+                {
+                  tStartMs: 0,
+                  dDurationMs: 1200,
+                  segs: [{ utf8: 'Hello world' }],
+                },
+                {
+                  tStartMs: 1200,
+                  dDurationMs: 1200,
+                  segs: [{ utf8: 'from test subtitles' }],
+                },
+              ],
+            }),
+            {
+              status: 200,
+              headers: {
+                'content-type': 'application/json',
+              },
+            },
+          )
+        }
+
+        throw new Error(`Unexpected external fetch url: ${url}`)
+      })
+
+      vi.stubGlobal('fetch', externalFetch)
+
       const response = await postJson('/api/fetchSubs', {
         youtubeUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
       })
@@ -39,6 +95,7 @@ describe('fetchSubs API', () => {
       expect(typeof payload.captions[0]?.durationMs).toBe('number')
       expect(typeof payload.captions[0]?.text).toBe('string')
       expect(payload.captions[0]?.text.length).toBeGreaterThan(0)
+      expect(externalFetch).toHaveBeenCalledTimes(2)
     },
   )
 

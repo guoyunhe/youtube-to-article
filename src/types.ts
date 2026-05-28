@@ -22,6 +22,7 @@ export interface SessionRecord {
   updatedAt: string
   status: SessionStatus
   options: GenerationOptions
+  transcript?: string
   title?: string
   article?: string
   transcriptPreview?: string

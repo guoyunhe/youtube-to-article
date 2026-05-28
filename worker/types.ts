@@ -3,6 +3,7 @@ export interface Env {
   ASSETS: {
     fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
   }
+  DB: D1Database
   GEMINI_API_KEY?: string
 }
 
@@ -14,6 +15,30 @@ export interface GenerationOptions {
   customPrompt: string
 }
 
+export interface CaptionSegment {
+  startMs: number
+  durationMs: number
+  text: string
+}
+
+export type SessionStatus = 'queued' | 'generating' | 'completed' | 'failed'
+
+export interface SessionRecord {
+  id: string
+  youtubeUrl: string
+  videoId: string | null
+  createdAt: string
+  updatedAt: string
+  status: SessionStatus
+  options: GenerationOptions
+  transcript?: string
+  title?: string
+  article?: string
+  transcriptPreview?: string
+  captions?: CaptionSegment[]
+  error?: string
+}
+
 export interface FetchSubsRequestBody {
   youtubeUrl: string
 }
@@ -21,4 +46,19 @@ export interface FetchSubsRequestBody {
 export interface GenerateArticleRequestBody {
   transcript: string
   options: GenerationOptions
+}
+
+export interface SaveSessionRequestBody {
+  session: SessionRecord
+}
+
+export interface CreateSessionRequestBody {
+  youtubeUrl: string
+  videoId?: string | null
+  status?: SessionStatus
+  options: GenerationOptions
+}
+
+export interface PatchSessionRequestBody {
+  patch: Partial<Omit<SessionRecord, 'id' | 'createdAt' | 'updatedAt'>>
 }

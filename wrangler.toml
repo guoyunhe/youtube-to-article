@@ -6,3 +6,10 @@ compatibility_flags = ["nodejs_compat"]
 [assets]
 directory = "./dist"
 binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "youtube_to_article"
+database_id = "b239ca1c-8396-4c9a-b19d-2f01fa660146"
+preview_database_id = "b239ca1c-8396-4c9a-b19d-2f01fa660146"
+migrations_dir = "worker/migrations"

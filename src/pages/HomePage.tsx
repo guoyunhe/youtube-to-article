@@ -9,7 +9,7 @@ import { SessionList } from '../components/SessionList'
 import { UrlInputSection } from '../components/UrlInputSection'
 import { defaultOptions } from '../lib/defaults'
 import { normalizeLanguage } from '../lib/language'
-import { deleteSession, listSessions, saveSession } from '../lib/sessionStore'
+import { createSession, deleteSession, listSessions } from '../lib/sessionStore'
 import { extractVideoId, isValidYouTubeUrl } from '../lib/youtube'
 import type { GenerationOptions, SessionRecord } from '../types'
 
@@ -71,21 +71,16 @@ export function HomePage() {
       return
     }
 
-    const now = new Date().toISOString()
-    const session: SessionRecord = {
-      id: crypto.randomUUID(),
+    const session = await createSession({
       youtubeUrl: youtubeUrl.trim(),
       videoId,
-      createdAt: now,
-      updatedAt: now,
       options: {
         ...options,
         outputLanguage: detectedLanguage,
       },
       status: 'queued',
-    }
+    })
 
-    await saveSession(session)
     setRecentSessions(await listSessions())
     navigate(`/session/${session.id}`)
   }

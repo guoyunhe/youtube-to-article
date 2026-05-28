@@ -12,7 +12,7 @@ import Typography from '@mui/material/Typography'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
-import { deleteSession, getSession, saveSession } from '../lib/sessionStore'
+import { deleteSession, getSession, patchSession } from '../lib/sessionStore'
 import type {
   FetchSubsResponse,
   GenerateArticleResponse,
@@ -33,6 +33,7 @@ type GenerateArticleStreamEvent =
 type GenerationStage = 'fetchingSubs' | 'generatingArticle'
 type StageErrorMap = Partial<Record<GenerationStage, string>>
 type ContentTab = 'captions' | 'article'
+type SessionPatch = Partial<Omit<SessionRecord, 'id' | 'createdAt' | 'updatedAt'>>
 
 class GenerationRequestError extends Error {
   stage: GenerationStage
@@ -162,7 +163,7 @@ function deriveTitle(article: string): string {
 async function requestGeneration(
   session: SessionRecord,
   onStageChange: (stage: GenerationStage) => void,
-  onSubsFetched: (subs: FetchSubsResponse) => void,
+  onSubsFetched: (subs: FetchSubsResponse) => Promise<void>,
   onDelta: (article: string) => void,
   startFromStage: GenerationStage,
   cachedSubs: FetchSubsResponse | null,
@@ -178,7 +179,7 @@ async function requestGeneration(
       subs = await postJson<FetchSubsResponse>('/api/fetchSubs', {
         youtubeUrl: session.youtubeUrl,
       })
-      onSubsFetched(subs)
+      await onSubsFetched(subs)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to fetch captions.'
       throw new GenerationRequestError('fetchingSubs', message, { cause: error })
@@ -325,13 +326,23 @@ export function SessionPage() {
         return
       }
 
+      if (storedSession.transcript) {
+        lastFetchedSubs.current = {
+          transcript: storedSession.transcript,
+          transcriptPreview: storedSession.transcriptPreview ?? storedSession.transcript,
+          captions: storedSession.captions ?? [],
+          videoId: storedSession.videoId ?? '',
+        }
+      }
+
       setSession(storedSession)
     })
   }, [sessionId, t])
 
-  async function persistSession(nextSession: SessionRecord) {
-    setSession(nextSession)
-    await saveSession(nextSession)
+  async function persistSessionPatch(sessionId: string, patch: SessionPatch) {
+    const persisted = await patchSession(sessionId, patch)
+    setSession(persisted)
+    return persisted
   }
 
   const generate = useCallback(async (
@@ -351,7 +362,7 @@ export function SessionPage() {
       lastFetchedSubs.current = null
     }
 
-    const generatingSession: SessionRecord = {
+    let generatingSession: SessionRecord = {
       ...currentSession,
       status: 'generating',
       article: '',
@@ -360,7 +371,12 @@ export function SessionPage() {
       updatedAt: new Date().toISOString(),
     }
 
-    await persistSession(generatingSession)
+    generatingSession = await persistSessionPatch(generatingSession.id, {
+      status: 'generating',
+      article: '',
+      title: undefined,
+      error: undefined,
+    })
 
     try {
       const result = await requestGeneration(
@@ -369,8 +385,14 @@ export function SessionPage() {
           activeStage = stage
           setGenerationStage(stage)
         },
-        (subs) => {
+        async (subs) => {
           lastFetchedSubs.current = subs
+          await persistSessionPatch(generatingSession.id, {
+            transcript: subs.transcript,
+            transcriptPreview: subs.transcriptPreview,
+            captions: subs.captions,
+            videoId: subs.videoId,
+          })
         },
         (article) => {
         setSession((previous) => {
@@ -389,15 +411,14 @@ export function SessionPage() {
         lastFetchedSubs.current,
       )
 
-      await persistSession({
-        ...generatingSession,
+      await persistSessionPatch(generatingSession.id, {
         status: 'completed',
         article: result.article,
         title: result.title,
+        transcript: lastFetchedSubs.current?.transcript,
         transcriptPreview: result.transcriptPreview,
         captions: lastFetchedSubs.current?.captions,
         videoId: result.videoId,
-        updatedAt: new Date().toISOString(),
       })
       setStageErrors({})
     } catch (error) {
@@ -407,11 +428,9 @@ export function SessionPage() {
       setGenerationStage(failedStage)
       setStageErrors({ [failedStage]: message })
 
-      await persistSession({
-        ...generatingSession,
+      await persistSessionPatch(generatingSession.id, {
         status: 'failed',
         error: message,
-        updatedAt: new Date().toISOString(),
       })
     } finally {
       setGenerationStartedAt(null)

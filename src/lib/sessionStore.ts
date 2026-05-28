@@ -1,49 +1,106 @@
-import { openDB } from 'idb'
-import type { DBSchema, IDBPDatabase } from 'idb'
 import type { SessionRecord } from '../types'
 
-interface YouTubeToArticleDb extends DBSchema {
-  sessions: {
-    key: string
-    value: SessionRecord
-    indexes: {
-      'by-updatedAt': string
-    }
+type ErrorPayload = {
+  error?: string
+}
+
+async function parseJson<T>(response: Response): Promise<T> {
+  const text = await response.text()
+
+  if (!text.trim()) {
+    throw new Error('Empty response from session API.')
+  }
+
+  try {
+    return JSON.parse(text) as T
+  } catch {
+    throw new Error('Malformed JSON response from session API.')
   }
 }
 
-const dbPromise = openDB<YouTubeToArticleDb>('youtube-to-article', 1, {
-  upgrade(db) {
-    const store = db.createObjectStore('sessions', {
-      keyPath: 'id',
-    })
+async function assertOk(response: Response): Promise<void> {
+  if (response.ok) {
+    return
+  }
 
-    store.createIndex('by-updatedAt', 'updatedAt')
-  },
-})
-
-async function getDb(): Promise<IDBPDatabase<YouTubeToArticleDb>> {
-  return dbPromise
+  const payload = await parseJson<ErrorPayload>(response)
+  throw new Error(payload.error ?? 'Session API request failed.')
 }
 
 export async function saveSession(session: SessionRecord): Promise<void> {
-  const db = await getDb()
-  await db.put('sessions', session)
+  const response = await fetch('/api/sessions/upsert', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ session }),
+  })
+
+  await assertOk(response)
+}
+
+export async function createSession(input: {
+  youtubeUrl: string
+  videoId: string | null
+  status: SessionRecord['status']
+  options: SessionRecord['options']
+}): Promise<SessionRecord> {
+  const response = await fetch('/api/sessions', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  })
+
+  await assertOk(response)
+  return parseJson<SessionRecord>(response)
+}
+
+export async function patchSession(
+  id: string,
+  patch: Partial<Omit<SessionRecord, 'id' | 'createdAt' | 'updatedAt'>>,
+): Promise<SessionRecord> {
+  const response = await fetch(`/api/sessions/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ patch }),
+  })
+
+  await assertOk(response)
+  return parseJson<SessionRecord>(response)
 }
 
 export async function getSession(id: string): Promise<SessionRecord | undefined> {
-  const db = await getDb()
-  return db.get('sessions', id)
+  const response = await fetch(`/api/sessions/${encodeURIComponent(id)}`)
+
+  if (response.status === 404) {
+    return undefined
+  }
+
+  await assertOk(response)
+  return parseJson<SessionRecord>(response)
 }
 
 export async function deleteSession(id: string): Promise<void> {
-  const db = await getDb()
-  await db.delete('sessions', id)
+  const response = await fetch(`/api/sessions/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  })
+
+  if (response.status === 404) {
+    return
+  }
+
+  await assertOk(response)
 }
 
 export async function listSessions(limit = 8): Promise<SessionRecord[]> {
-  const db = await getDb()
-  const sessions = await db.getAllFromIndex('sessions', 'by-updatedAt')
+  const response = await fetch(`/api/sessions?limit=${encodeURIComponent(String(limit))}`)
 
-  return sessions.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)).slice(0, limit)
+  await assertOk(response)
+
+  const payload = await parseJson<{ sessions: SessionRecord[] }>(response)
+  return payload.sessions
 }
