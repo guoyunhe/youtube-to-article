@@ -7,6 +7,9 @@
   "scripts": {
     "dev": "vite",
     "dev:worker": "wrangler dev",
+    "migrate:list": "wrangler d1 migrations list youtube_to_article",
+    "migrate:local": "wrangler d1 migrations apply youtube_to_article --local",
+    "migrate:remote": "wrangler d1 migrations apply youtube_to_article --remote",
     "build": "tsc -b && vite build",
     "test": "vitest run",
     "test:watch": "vitest",
