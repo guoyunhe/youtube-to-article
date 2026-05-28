@@ -85,4 +85,66 @@ describe('sessions API', () => {
     })
     expect(notFoundAfterDeleteResponse.status).toBe(404)
   })
+
+  it('clears error when a failed session is regenerated to completed', async () => {
+    const createResponse = await postJson('/api/sessions', {
+      youtubeUrl: 'https://www.youtube.com/watch?v=abc123xyz00',
+      videoId: 'abc123xyz00',
+      status: 'failed',
+      options: {
+        taskType: 'summary',
+        outputStyle: 'professional',
+        targetReaders: 'beginners',
+        outputLanguage: 'en',
+        customPrompt: '',
+      },
+    })
+
+    expect(createResponse.status).toBe(201)
+    const created = (await createResponse.json()) as { id: string }
+
+    const failPatchResponse = await request(`/api/sessions/${created.id}`, {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        patch: {
+          status: 'failed',
+          error: 'temporary upstream error',
+        },
+      }),
+    })
+    expect(failPatchResponse.status).toBe(200)
+
+    const completedPatchResponse = await request(`/api/sessions/${created.id}`, {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        patch: {
+          status: 'completed',
+          article: '# Final\nAll good',
+          title: 'final title',
+        },
+      }),
+    })
+    expect(completedPatchResponse.status).toBe(200)
+
+    const getResponse = await request(`/api/sessions/${created.id}`, {
+      method: 'GET',
+    })
+    expect(getResponse.status).toBe(200)
+
+    const payload = (await getResponse.json()) as {
+      status: string
+      error?: string
+      article?: string
+    }
+
+    expect(payload.status).toBe('completed')
+    expect(payload.error).toBeUndefined()
+    expect(payload.article).toBe('# Final\nAll good')
+  })
 })

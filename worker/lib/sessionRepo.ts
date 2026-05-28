@@ -264,6 +264,8 @@ function toSessionRecord(row: SessionRow, sections: SessionSection[], article?: 
 }
 
 export async function upsertSession(env: Env, session: SessionRecord): Promise<void> {
+  const normalizedError = session.status === 'completed' ? null : session.error ?? null
+
   await env.DB.prepare(
     `INSERT INTO sessions (
       id,
@@ -301,7 +303,7 @@ export async function upsertSession(env: Env, session: SessionRecord): Promise<v
       session.transcriptPreview ?? null,
       session.captions ? JSON.stringify(session.captions) : null,
       session.title ?? null,
-      session.error ?? null,
+      normalizedError,
       session.createdAt,
       session.updatedAt,
     )
