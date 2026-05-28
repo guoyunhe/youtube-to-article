@@ -35,6 +35,17 @@ type StageErrorMap = Partial<Record<GenerationStage, string>>
 type ContentTab = 'captions' | 'article'
 type SessionPatch = Partial<Omit<SessionRecord, 'id' | 'createdAt' | 'updatedAt'>>
 
+function normalizePatchForUi(patch: SessionPatch): SessionPatch {
+  if (!patch.status || patch.status === 'failed') {
+    return patch
+  }
+
+  return {
+    ...patch,
+    error: undefined,
+  }
+}
+
 class GenerationRequestError extends Error {
   stage: GenerationStage
 
@@ -340,6 +351,20 @@ export function SessionPage() {
   }, [sessionId, t])
 
   async function persistSessionPatch(sessionId: string, patch: SessionPatch) {
+    const optimisticPatch = normalizePatchForUi(patch)
+
+    setSession((previous) => {
+      if (!previous || previous.id !== sessionId) {
+        return previous
+      }
+
+      return {
+        ...previous,
+        ...optimisticPatch,
+        updatedAt: new Date().toISOString(),
+      }
+    })
+
     const persisted = await patchSession(sessionId, patch)
     setSession(persisted)
     return persisted
