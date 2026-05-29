@@ -17,6 +17,7 @@ export interface SessionSection {
   parentId: string | null
   title: string
   content: string
+  summary?: string
   depth: number
   position: number
   children: SessionSection[]

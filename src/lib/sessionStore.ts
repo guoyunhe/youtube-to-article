@@ -104,3 +104,15 @@ export async function listSessions(limit = 8): Promise<SessionRecord[]> {
   const payload = await parseJson<{ sessions: SessionRecord[] }>(response)
   return payload.sessions
 }
+
+export async function summarizeSection(sessionId: string, sectionId: string): Promise<SessionRecord> {
+  const response = await fetch(
+    `/api/sessions/${encodeURIComponent(sessionId)}/sections/${encodeURIComponent(sectionId)}/summarize`,
+    {
+      method: 'POST',
+    },
+  )
+
+  await assertOk(response)
+  return parseJson<SessionRecord>(response)
+}

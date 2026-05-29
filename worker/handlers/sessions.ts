@@ -1,8 +1,11 @@
 import { buildTraceHeaders, json } from '../lib/http'
+import { summarizeSectionWith5W1H } from '../lib/gemini'
 import {
   deleteSessionById,
   getSessionById,
+  getSectionSummarySourceById,
   listRecentSessions,
+  updateSectionSummaryById,
   upsertSession,
 } from '../lib/sessionRepo'
 import type {
@@ -389,6 +392,106 @@ export async function handleDeleteSession(sessionId: string, env: Env): Promise<
       },
       {
         status: 500,
+        headers: buildTraceHeaders(requestId),
+      },
+    )
+  }
+}
+
+export async function handleSummarizeSection(
+  sessionId: string,
+  sectionId: string,
+  env: Env,
+): Promise<Response> {
+  const requestId = crypto.randomUUID()
+
+  try {
+    const session = await getSessionById(env, sessionId)
+
+    if (!session) {
+      return json(
+        {
+          error: 'Session not found.',
+          requestId,
+        },
+        {
+          status: 404,
+          headers: buildTraceHeaders(requestId),
+        },
+      )
+    }
+
+    const source = await getSectionSummarySourceById(env, sessionId, sectionId)
+
+    if (!source) {
+      return json(
+        {
+          error: 'Section not found.',
+          requestId,
+        },
+        {
+          status: 404,
+          headers: buildTraceHeaders(requestId),
+        },
+      )
+    }
+
+    const summary = await summarizeSectionWith5W1H(
+      env,
+      session.options.outputLanguage,
+      source.title,
+      source.content,
+    )
+
+    const updated = await updateSectionSummaryById(env, sessionId, sectionId, summary)
+
+    if (!updated) {
+      return json(
+        {
+          error: 'Section not found.',
+          requestId,
+        },
+        {
+          status: 404,
+          headers: buildTraceHeaders(requestId),
+        },
+      )
+    }
+
+    const refreshed = await getSessionById(env, sessionId)
+
+    if (!refreshed) {
+      return json(
+        {
+          error: 'Session not found.',
+          requestId,
+        },
+        {
+          status: 404,
+          headers: buildTraceHeaders(requestId),
+        },
+      )
+    }
+
+    return json(refreshed, {
+      headers: buildTraceHeaders(requestId),
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unable to summarize section.'
+    const status =
+      message === 'The GEMINI_API_KEY Worker secret is not configured.'
+        ? 500
+        : message.startsWith('Gemini request failed:')
+          ? 502
+          : 500
+
+    return json(
+      {
+        error: message,
+        requestId,
+      },
+      {
+        status,
         headers: buildTraceHeaders(requestId),
       },
     )

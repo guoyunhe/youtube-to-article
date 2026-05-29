@@ -15,6 +15,7 @@ const resources = {
         retry: 'Retry generation',
         deleteSession: 'Delete session',
         summarizeHeading: 'Summarize',
+        summarizingHeading: 'Summarizing...',
       },
       home: {
         headline: 'Paste a YouTube URL',
@@ -51,6 +52,7 @@ const resources = {
         articleEmpty: 'The generated article will appear here after generation finishes.',
         details: 'Session details',
         errorPrefix: 'Generation failed:',
+        summarizeFailed: 'Unable to summarize this section.',
         notFound: 'Session not found in local history.',
       },
       options: {
@@ -104,6 +106,7 @@ const resources = {
         retry: '重新生成',
         deleteSession: '删除会话',
         summarizeHeading: '总结',
+        summarizingHeading: '总结中...',
       },
       home: {
         headline: '粘贴 YouTube 链接',
@@ -139,6 +142,7 @@ const resources = {
         articleEmpty: '生成完成后，文章会显示在这里。',
         details: '会话详情',
         errorPrefix: '生成失败：',
+        summarizeFailed: '无法总结该段落。',
         notFound: '未在本地历史中找到该会话。',
       },
       options: {

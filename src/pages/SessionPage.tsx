@@ -9,16 +9,17 @@ import StepContent from '@mui/material/StepContent'
 import StepLabel from '@mui/material/StepLabel'
 import Stepper from '@mui/material/Stepper'
 import Typography from '@mui/material/Typography'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { deleteSession, getSession, patchSession } from '../lib/sessionStore'
+import { deleteSession, getSession, patchSession, summarizeSection } from '../lib/sessionStore'
 import type {
   FetchCaptionsResponse,
   GenerateArticleResponse,
   SessionRecord,
+  SessionSection,
 } from '../types'
 
 type GenerateErrorPayload = {
@@ -173,14 +174,60 @@ function deriveTitle(article: string): string {
   return article.split('\n')[0]?.replace(/^#+\s*/, '').trim() || 'Generated article'
 }
 
+function getNodeText(node: React.ReactNode): string {
+  if (typeof node === 'string' || typeof node === 'number') {
+    return String(node)
+  }
+
+  if (Array.isArray(node)) {
+    return node.map((child) => getNodeText(child)).join('')
+  }
+
+  if (node && typeof node === 'object' && 'props' in node) {
+    const maybeProps = node as { props?: { children?: React.ReactNode } }
+    return getNodeText(maybeProps.props?.children ?? '')
+  }
+
+  return ''
+}
+
+function normalizeHeadingTitle(raw: string): string {
+  return raw.trim().replace(/\s+/g, ' ').toLowerCase()
+}
+
+function flattenSections(sections: SessionSection[]): SessionSection[] {
+  const flat: SessionSection[] = []
+
+  const visit = (nodes: SessionSection[]) => {
+    for (const node of nodes) {
+      flat.push(node)
+
+      if (node.children.length > 0) {
+        visit(node.children)
+      }
+    }
+  }
+
+  visit(sections)
+  return flat.sort((left, right) => left.position - right.position)
+}
+
 function MarkdownHeading({
   level,
   children,
   buttonLabel,
+  loadingLabel,
+  summary,
+  isLoading,
+  onSummarize,
 }: {
   level: 1 | 2 | 3 | 4 | 5 | 6
   children: React.ReactNode
   buttonLabel: string
+  loadingLabel: string
+  summary?: string
+  isLoading: boolean
+  onSummarize?: () => void
 }) {
   const headingTag = {
     1: 'h1',
@@ -193,23 +240,55 @@ function MarkdownHeading({
 
   return (
     <Box
-      component={headingTag}
       sx={{
-        alignItems: 'center',
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: 1.2,
-        justifyContent: 'space-between',
-        lineHeight: 1.2,
+        display: 'grid',
+        gap: 1,
         my: level === 1 ? 0 : 1.5,
       }}
     >
-      <Typography component="span" sx={{ fontSize: 'inherit', fontWeight: 700 }}>
-        {children}
-      </Typography>
-      <Button disabled size="small" variant="outlined">
-        {buttonLabel}
-      </Button>
+      <Box
+        component={headingTag}
+        sx={{
+          alignItems: 'center',
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 1.2,
+          justifyContent: 'space-between',
+          lineHeight: 1.2,
+          m: 0,
+        }}
+      >
+        <Typography component="span" sx={{ fontSize: 'inherit', fontWeight: 700 }}>
+          {children}
+        </Typography>
+        <Button
+          disabled={!onSummarize || isLoading}
+          size="small"
+          variant="outlined"
+          onClick={onSummarize}
+          startIcon={isLoading ? <CircularProgress size={12} /> : null}
+        >
+          {isLoading ? loadingLabel : buttonLabel}
+        </Button>
+      </Box>
+
+      {summary ? (
+        <Box
+          sx={{
+            backgroundColor: 'action.hover',
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 1.5,
+            color: 'text.secondary',
+            fontSize: 13,
+            lineHeight: 1.7,
+            p: 1.2,
+            whiteSpace: 'pre-wrap',
+          }}
+        >
+          {summary}
+        </Box>
+      ) : null}
     </Box>
   )
 }
@@ -337,6 +416,8 @@ export function SessionPage() {
   const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(null)
   const [generationStage, setGenerationStage] = useState<GenerationStage>('fetchingSubs')
   const [stageErrors, setStageErrors] = useState<StageErrorMap>({})
+  const [summarizingSectionId, setSummarizingSectionId] = useState<string | null>(null)
+  const [summarizeError, setSummarizeError] = useState('')
   const [nowMs, setNowMs] = useState<number>(() => Date.now())
   const lastFetchedSubs = useRef<FetchCaptionsResponse | null>(null)
   const autostarted = useRef(false)
@@ -363,6 +444,10 @@ export function SessionPage() {
   const lastCaption = captionSegments.at(-1)
   const captionDurationMs = lastCaption ? lastCaption.startMs + lastCaption.durationMs : 0
   const videoId = session?.videoId
+  const flattenedSections = useMemo(
+    () => flattenSections(session?.sections ?? []),
+    [session?.sections],
+  )
   const numberFormatter = new Intl.NumberFormat(i18n.resolvedLanguage ?? i18n.language)
   const activeStep =
     session?.status === 'completed' ? 2 : generationStage === 'fetchingSubs' ? 0 : 1
@@ -523,6 +608,24 @@ export function SessionPage() {
     setActiveContentTab(value)
   }
 
+  const handleSummarizeSection = useCallback(async (sectionId: string) => {
+    if (!session || session.status !== 'completed') {
+      return
+    }
+
+    setSummarizeError('')
+    setSummarizingSectionId(sectionId)
+
+    try {
+      const updated = await summarizeSection(session.id, sectionId)
+      setSession(updated)
+    } catch (error) {
+      setSummarizeError(error instanceof Error ? error.message : t('session.summarizeFailed'))
+    } finally {
+      setSummarizingSectionId(null)
+    }
+  }, [session, t])
+
   useEffect(() => {
     if (!session || autostarted.current) {
       return
@@ -587,6 +690,23 @@ export function SessionPage() {
         <Typography>{t('session.generating')}</Typography>
       </Paper>
     )
+  }
+
+  const headingRenderCounter = new Map<string, number>()
+  const resolveSectionForHeading = (
+    level: 1 | 2 | 3 | 4 | 5 | 6,
+    children: React.ReactNode,
+  ): SessionSection | undefined => {
+    const title = normalizeHeadingTitle(getNodeText(children))
+    const key = `${level}|${title}`
+    const index = headingRenderCounter.get(key) ?? 0
+    headingRenderCounter.set(key, index + 1)
+
+    const matched = flattenedSections.filter(
+      (section) => section.depth === level && normalizeHeadingTitle(section.title) === title,
+    )
+
+    return matched[index]
   }
 
   return (
@@ -773,6 +893,23 @@ export function SessionPage() {
                 </Typography>
               </Box>
 
+              {summarizeError ? (
+                <Box
+                  sx={{
+                    backgroundColor: 'error.light',
+                    border: '1px solid',
+                    borderColor: 'error.main',
+                    borderRadius: 1.5,
+                    color: 'error.contrastText',
+                    fontSize: 13,
+                    mb: 2,
+                    p: 1.2,
+                  }}
+                >
+                  {summarizeError}
+                </Box>
+              ) : null}
+
               {session.article ? (
                 <Box
                   component="article"
@@ -837,36 +974,126 @@ export function SessionPage() {
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
-                      h1: ({ children }) => (
-                        <MarkdownHeading level={1} buttonLabel={t('actions.summarizeHeading')}>
-                          {children}
-                        </MarkdownHeading>
-                      ),
-                      h2: ({ children }) => (
-                        <MarkdownHeading level={2} buttonLabel={t('actions.summarizeHeading')}>
-                          {children}
-                        </MarkdownHeading>
-                      ),
-                      h3: ({ children }) => (
-                        <MarkdownHeading level={3} buttonLabel={t('actions.summarizeHeading')}>
-                          {children}
-                        </MarkdownHeading>
-                      ),
-                      h4: ({ children }) => (
-                        <MarkdownHeading level={4} buttonLabel={t('actions.summarizeHeading')}>
-                          {children}
-                        </MarkdownHeading>
-                      ),
-                      h5: ({ children }) => (
-                        <MarkdownHeading level={5} buttonLabel={t('actions.summarizeHeading')}>
-                          {children}
-                        </MarkdownHeading>
-                      ),
-                      h6: ({ children }) => (
-                        <MarkdownHeading level={6} buttonLabel={t('actions.summarizeHeading')}>
-                          {children}
-                        </MarkdownHeading>
-                      ),
+                      h1: ({ children }) => {
+                        const section = resolveSectionForHeading(1, children)
+
+                        return (
+                          <MarkdownHeading
+                            level={1}
+                            buttonLabel={t('actions.summarizeHeading')}
+                            loadingLabel={t('actions.summarizingHeading')}
+                            summary={section?.summary}
+                            isLoading={summarizingSectionId === section?.id}
+                            onSummarize={
+                              section && !summarizingSectionId && session.status === 'completed'
+                                ? () => void handleSummarizeSection(section.id)
+                                : undefined
+                            }
+                          >
+                            {children}
+                          </MarkdownHeading>
+                        )
+                      },
+                      h2: ({ children }) => {
+                        const section = resolveSectionForHeading(2, children)
+
+                        return (
+                          <MarkdownHeading
+                            level={2}
+                            buttonLabel={t('actions.summarizeHeading')}
+                            loadingLabel={t('actions.summarizingHeading')}
+                            summary={section?.summary}
+                            isLoading={summarizingSectionId === section?.id}
+                            onSummarize={
+                              section && !summarizingSectionId && session.status === 'completed'
+                                ? () => void handleSummarizeSection(section.id)
+                                : undefined
+                            }
+                          >
+                            {children}
+                          </MarkdownHeading>
+                        )
+                      },
+                      h3: ({ children }) => {
+                        const section = resolveSectionForHeading(3, children)
+
+                        return (
+                          <MarkdownHeading
+                            level={3}
+                            buttonLabel={t('actions.summarizeHeading')}
+                            loadingLabel={t('actions.summarizingHeading')}
+                            summary={section?.summary}
+                            isLoading={summarizingSectionId === section?.id}
+                            onSummarize={
+                              section && !summarizingSectionId && session.status === 'completed'
+                                ? () => void handleSummarizeSection(section.id)
+                                : undefined
+                            }
+                          >
+                            {children}
+                          </MarkdownHeading>
+                        )
+                      },
+                      h4: ({ children }) => {
+                        const section = resolveSectionForHeading(4, children)
+
+                        return (
+                          <MarkdownHeading
+                            level={4}
+                            buttonLabel={t('actions.summarizeHeading')}
+                            loadingLabel={t('actions.summarizingHeading')}
+                            summary={section?.summary}
+                            isLoading={summarizingSectionId === section?.id}
+                            onSummarize={
+                              section && !summarizingSectionId && session.status === 'completed'
+                                ? () => void handleSummarizeSection(section.id)
+                                : undefined
+                            }
+                          >
+                            {children}
+                          </MarkdownHeading>
+                        )
+                      },
+                      h5: ({ children }) => {
+                        const section = resolveSectionForHeading(5, children)
+
+                        return (
+                          <MarkdownHeading
+                            level={5}
+                            buttonLabel={t('actions.summarizeHeading')}
+                            loadingLabel={t('actions.summarizingHeading')}
+                            summary={section?.summary}
+                            isLoading={summarizingSectionId === section?.id}
+                            onSummarize={
+                              section && !summarizingSectionId && session.status === 'completed'
+                                ? () => void handleSummarizeSection(section.id)
+                                : undefined
+                            }
+                          >
+                            {children}
+                          </MarkdownHeading>
+                        )
+                      },
+                      h6: ({ children }) => {
+                        const section = resolveSectionForHeading(6, children)
+
+                        return (
+                          <MarkdownHeading
+                            level={6}
+                            buttonLabel={t('actions.summarizeHeading')}
+                            loadingLabel={t('actions.summarizingHeading')}
+                            summary={section?.summary}
+                            isLoading={summarizingSectionId === section?.id}
+                            onSummarize={
+                              section && !summarizingSectionId && session.status === 'completed'
+                                ? () => void handleSummarizeSection(section.id)
+                                : undefined
+                            }
+                          >
+                            {children}
+                          </MarkdownHeading>
+                        )
+                      },
                     }}
                   >
                     {session.article}

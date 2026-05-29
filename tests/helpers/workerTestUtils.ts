@@ -24,6 +24,7 @@ type StoredSectionRow = {
   position: number
   title: string
   content: string
+  summary: string | null
   created_at: string
   updated_at: string
 }
@@ -80,10 +81,31 @@ class InMemoryD1 {
               position: Number(params[4]),
               title: String(params[5]),
               content: String(params[6]),
-              created_at: String(params[7]),
-              updated_at: String(params[8]),
+              summary: (params[7] as string | null) ?? null,
+              created_at: String(params[8]),
+              updated_at: String(params[9]),
             }
             this.sections.set(row.id, row)
+            return { meta: { changes: 1 } }
+          }
+
+          if (normalized.startsWith('update sections set summary = ?, updated_at = ? where session_id = ? and id = ?')) {
+            const summary = String(params[0])
+            const updatedAt = String(params[1])
+            const sessionId = String(params[2])
+            const sectionId = String(params[3])
+            const existing = this.sections.get(sectionId)
+
+            if (!existing || existing.session_id !== sessionId) {
+              return { meta: { changes: 0 } }
+            }
+
+            this.sections.set(sectionId, {
+              ...existing,
+              summary,
+              updated_at: updatedAt,
+            })
+
             return { meta: { changes: 1 } }
           }
 

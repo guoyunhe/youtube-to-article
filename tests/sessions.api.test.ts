@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanupWorkerTestGlobals, postJson, request } from './helpers/workerTestUtils'
 
 afterEach(() => {
@@ -146,5 +146,89 @@ describe('sessions API', () => {
     expect(payload.status).toBe('completed')
     expect(payload.error).toBeUndefined()
     expect(payload.article).toBe('# Final\nAll good')
+  })
+
+  it('summarizes a section and stores summary on that section', async () => {
+    const externalFetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = input instanceof Request ? input.url : String(input)
+
+      if (url.startsWith('https://generativelanguage.googleapis.com/')) {
+        return new Response(
+          JSON.stringify({
+            candidates: [
+              {
+                content: {
+                  parts: [
+                    {
+                      text: 'Who\n- Developers\n\nWhat\n- Key section summary',
+                    },
+                  ],
+                },
+              },
+            ],
+          }),
+          {
+            status: 200,
+            headers: {
+              'content-type': 'application/json',
+            },
+          },
+        )
+      }
+
+      throw new Error(`Unexpected external fetch url: ${url}`)
+    })
+
+    vi.stubGlobal('fetch', externalFetch)
+
+    const createResponse = await postJson('/api/sessions', {
+      youtubeUrl: 'https://www.youtube.com/watch?v=abc123xyz00',
+      videoId: 'abc123xyz00',
+      status: 'completed',
+      options: {
+        taskType: 'summary',
+        outputStyle: 'professional',
+        targetReaders: 'beginners',
+        outputLanguage: 'en',
+        customPrompt: '',
+      },
+    })
+
+    expect(createResponse.status).toBe(201)
+    const created = (await createResponse.json()) as { id: string }
+
+    const patchResponse = await request(`/api/sessions/${created.id}`, {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        patch: {
+          status: 'completed',
+          article: '# Intro\nOverview\n## Detail\nDeep dive',
+          title: 'generated article title',
+        },
+      }),
+    })
+    expect(patchResponse.status).toBe(200)
+
+    const summarizeResponse = await request(
+      `/api/sessions/${created.id}/sections/${encodeURIComponent(`${created.id}:sec-1`)}/summarize`,
+      {
+        method: 'POST',
+      },
+    )
+
+    expect(summarizeResponse.status).toBe(200)
+    const summarizePayload = (await summarizeResponse.json()) as {
+      sections?: Array<{
+        id: string
+        summary?: string
+      }>
+    }
+
+    expect(summarizePayload.sections?.[0]?.id).toBe(`${created.id}:sec-1`)
+    expect(summarizePayload.sections?.[0]?.summary).toContain('Who')
+    expect(externalFetch).toHaveBeenCalledTimes(1)
   })
 })

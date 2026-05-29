@@ -103,3 +103,51 @@ export async function* generateArticleStreamFromTranscript(
     }
   }
 }
+
+export async function summarizeSectionWith5W1H(
+  env: Env,
+  outputLanguage: GenerationOptions['outputLanguage'],
+  title: string,
+  sectionContent: string,
+): Promise<string> {
+  assertGeminiConfigured(env)
+  const ai = createGeminiClient(env)
+  const model = env.AI_MODEL || 'gemini-2.0-flash'
+  const languageInstruction =
+    outputLanguage === 'zh'
+      ? '请使用简体中文输出。'
+      : 'Please write the response in English.'
+
+  const prompt = [
+    'You are summarizing a section of an article, including its child sections.',
+    languageInstruction,
+    'Use a clear 5W1H structure with six headings in this order: Who, What, When, Where, Why, How.',
+    'Under each heading, provide concise bullet points.',
+    'If information is missing, explicitly write "Not specified" for that part.',
+    'Keep the summary factual and grounded in the provided content only.',
+    `Section title: ${title}`,
+    'Section content:',
+    sectionContent,
+  ].join('\n\n')
+
+  const response = await ai.models.generateContent({
+    model,
+    contents: [
+      {
+        parts: [
+          {
+            text: prompt,
+          },
+        ],
+      },
+    ],
+  })
+
+  const summary = response.text?.trim()
+
+  if (!summary) {
+    throw new Error('Gemini returned an empty section summary.')
+  }
+
+  return summary
+}

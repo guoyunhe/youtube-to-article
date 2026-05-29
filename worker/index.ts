@@ -7,6 +7,7 @@ import {
   handleListSessions,
   handlePatchSession,
   handleSaveSession,
+  handleSummarizeSection,
 } from './handlers/sessions'
 import { json } from './lib/http'
 import type { Env } from './types'
@@ -14,6 +15,9 @@ import type { Env } from './types'
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
+    const sectionSummarizeMatch = url.pathname.match(
+      /^\/api\/sessions\/([^/]+)\/sections\/([^/]+)\/summarize$/,
+    )
     const sessionMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)$/)
 
     if (url.pathname === '/api/fetchCaptions' && request.method === 'POST') {
@@ -34,6 +38,14 @@ export default {
 
     if (url.pathname === '/api/sessions/upsert' && request.method === 'POST') {
       return handleSaveSession(request, env)
+    }
+
+    if (sectionSummarizeMatch && request.method === 'POST') {
+      return handleSummarizeSection(
+        decodeURIComponent(sectionSummarizeMatch[1]),
+        decodeURIComponent(sectionSummarizeMatch[2]),
+        env,
+      )
     }
 
     if (sessionMatch && request.method === 'GET') {

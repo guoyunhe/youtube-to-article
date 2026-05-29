@@ -22,6 +22,7 @@ type SectionRow = {
   position: number
   title: string
   content: string
+  summary: string | null
 }
 
 type SectionInsertRow = {
@@ -31,6 +32,7 @@ type SectionInsertRow = {
   position: number
   title: string
   content: string
+  summary: string | null
 }
 
 function safeParseJson<T>(raw: string | null, fallback: T): T {
@@ -120,6 +122,7 @@ function buildSectionRowsFromArticle(article: string): SectionInsertRow[] {
     position: section.position,
     title: section.title,
     content: section.contentLines.join('\n').trim(),
+    summary: null,
   }))
 }
 
@@ -135,6 +138,7 @@ function mapSectionRowsToTree(rows: SectionRow[]): SessionSection[] {
       position: row.position,
       title: row.title,
       content: row.content,
+      summary: row.summary ?? undefined,
       children: [],
     })
   }
@@ -192,9 +196,10 @@ async function replaceSessionSections(env: Env, sessionId: string, article: stri
         position,
         title,
         content,
+        summary,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         `${sessionId}:${row.id}`,
@@ -204,6 +209,7 @@ async function replaceSessionSections(env: Env, sessionId: string, article: stri
         row.position,
         row.title,
         row.content,
+        row.summary,
         now,
         now,
       )
@@ -222,7 +228,8 @@ async function getSessionSectionsAndArticle(
       depth,
       position,
       title,
-      content
+      content,
+      summary
     FROM sections
     WHERE session_id = ?
     ORDER BY position ASC`,
@@ -236,6 +243,95 @@ async function getSessionSectionsAndArticle(
     sections: mapSectionRowsToTree(rows),
     article: composeArticleFromSectionRows(rows),
   }
+}
+
+function buildSectionSummarySource(
+  rows: SectionRow[],
+  sectionId: string,
+): { title: string; content: string } | null {
+  const byId = new Map(rows.map((row) => [row.id, row]))
+  const root = byId.get(sectionId)
+
+  if (!root) {
+    return null
+  }
+
+  const isDescendant = (candidate: SectionRow): boolean => {
+    if (candidate.id === root.id) {
+      return true
+    }
+
+    let parentId = candidate.parent_id
+
+    while (parentId) {
+      if (parentId === root.id) {
+        return true
+      }
+
+      parentId = byId.get(parentId)?.parent_id ?? null
+    }
+
+    return false
+  }
+
+  const baseDepth = root.depth
+  const selectedRows = rows.filter(isDescendant)
+  const content = selectedRows
+    .map((row) => {
+      const level = Math.min(Math.max(row.depth - baseDepth + 1, 1), 6)
+      const heading = `${'#'.repeat(level)} ${row.title}`
+      const body = row.content.trim()
+      return body ? `${heading}\n${body}` : heading
+    })
+    .join('\n\n')
+
+  return {
+    title: root.title,
+    content,
+  }
+}
+
+export async function getSectionSummarySourceById(
+  env: Env,
+  sessionId: string,
+  sectionId: string,
+): Promise<{ title: string; content: string } | null> {
+  const result = await env.DB.prepare(
+    `SELECT
+      id,
+      parent_id,
+      depth,
+      position,
+      title,
+      content,
+      summary
+    FROM sections
+    WHERE session_id = ?
+    ORDER BY position ASC`,
+  )
+    .bind(sessionId)
+    .all<SectionRow>()
+
+  const rows = result.results ?? []
+  return buildSectionSummarySource(rows, sectionId)
+}
+
+export async function updateSectionSummaryById(
+  env: Env,
+  sessionId: string,
+  sectionId: string,
+  summary: string,
+): Promise<boolean> {
+  const now = new Date().toISOString()
+  const result = await env.DB.prepare(
+    `UPDATE sections
+    SET summary = ?, updated_at = ?
+    WHERE session_id = ? AND id = ?`,
+  )
+    .bind(summary, now, sessionId, sectionId)
+    .run()
+
+  return (result.meta.changes ?? 0) > 0
 }
 
 function toSessionRecord(row: SessionRow, sections: SessionSection[], article?: string): SessionRecord {
