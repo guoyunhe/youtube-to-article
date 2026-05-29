@@ -174,27 +174,6 @@ function deriveTitle(article: string): string {
   return article.split('\n')[0]?.replace(/^#+\s*/, '').trim() || 'Generated article'
 }
 
-function getNodeText(node: React.ReactNode): string {
-  if (typeof node === 'string' || typeof node === 'number') {
-    return String(node)
-  }
-
-  if (Array.isArray(node)) {
-    return node.map((child) => getNodeText(child)).join('')
-  }
-
-  if (node && typeof node === 'object' && 'props' in node) {
-    const maybeProps = node as { props?: { children?: React.ReactNode } }
-    return getNodeText(maybeProps.props?.children ?? '')
-  }
-
-  return ''
-}
-
-function normalizeHeadingTitle(raw: string): string {
-  return raw.trim().replace(/\s+/g, ' ').toLowerCase()
-}
-
 function flattenSections(sections: SessionSection[]): SessionSection[] {
   const flat: SessionSection[] = []
 
@@ -283,10 +262,31 @@ function MarkdownHeading({
             fontSize: 13,
             lineHeight: 1.7,
             p: 1.2,
-            whiteSpace: 'pre-wrap',
+            '& p': {
+              m: 0,
+            },
+            '& p + p': {
+              mt: 0.8,
+            },
+            '& ul, & ol': {
+              m: 0,
+              mt: 0.8,
+              pl: 2.4,
+            },
+            '& li + li': {
+              mt: 0.35,
+            },
+            '& code': {
+              fontFamily:
+                'ui-monospace, SFMono-Regular, SF Mono, Consolas, Liberation Mono, monospace',
+              fontSize: '0.92em',
+            },
+            '& a': {
+              color: 'primary.main',
+            },
           }}
         >
-          {summary}
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{summary}</ReactMarkdown>
         </Box>
       ) : null}
     </Box>
@@ -609,7 +609,7 @@ export function SessionPage() {
   }
 
   const handleSummarizeSection = useCallback(async (sectionId: string) => {
-    if (!session || session.status !== 'completed') {
+    if (!session) {
       return
     }
 
@@ -692,21 +692,14 @@ export function SessionPage() {
     )
   }
 
-  const headingRenderCounter = new Map<string, number>()
+  let headingRenderIndex = 0
   const resolveSectionForHeading = (
-    level: 1 | 2 | 3 | 4 | 5 | 6,
-    children: React.ReactNode,
+    _level: 1 | 2 | 3 | 4 | 5 | 6,
+    _children: React.ReactNode,
   ): SessionSection | undefined => {
-    const title = normalizeHeadingTitle(getNodeText(children))
-    const key = `${level}|${title}`
-    const index = headingRenderCounter.get(key) ?? 0
-    headingRenderCounter.set(key, index + 1)
-
-    const matched = flattenedSections.filter(
-      (section) => section.depth === level && normalizeHeadingTitle(section.title) === title,
-    )
-
-    return matched[index]
+    const section = flattenedSections[headingRenderIndex]
+    headingRenderIndex += 1
+    return section
   }
 
   return (
@@ -985,7 +978,7 @@ export function SessionPage() {
                             summary={section?.summary}
                             isLoading={summarizingSectionId === section?.id}
                             onSummarize={
-                              section && !summarizingSectionId && session.status === 'completed'
+                              section && !summarizingSectionId && session.status !== 'generating'
                                 ? () => void handleSummarizeSection(section.id)
                                 : undefined
                             }
@@ -1005,7 +998,7 @@ export function SessionPage() {
                             summary={section?.summary}
                             isLoading={summarizingSectionId === section?.id}
                             onSummarize={
-                              section && !summarizingSectionId && session.status === 'completed'
+                              section && !summarizingSectionId && session.status !== 'generating'
                                 ? () => void handleSummarizeSection(section.id)
                                 : undefined
                             }
@@ -1025,7 +1018,7 @@ export function SessionPage() {
                             summary={section?.summary}
                             isLoading={summarizingSectionId === section?.id}
                             onSummarize={
-                              section && !summarizingSectionId && session.status === 'completed'
+                              section && !summarizingSectionId && session.status !== 'generating'
                                 ? () => void handleSummarizeSection(section.id)
                                 : undefined
                             }
@@ -1045,7 +1038,7 @@ export function SessionPage() {
                             summary={section?.summary}
                             isLoading={summarizingSectionId === section?.id}
                             onSummarize={
-                              section && !summarizingSectionId && session.status === 'completed'
+                              section && !summarizingSectionId && session.status !== 'generating'
                                 ? () => void handleSummarizeSection(section.id)
                                 : undefined
                             }
@@ -1065,7 +1058,7 @@ export function SessionPage() {
                             summary={section?.summary}
                             isLoading={summarizingSectionId === section?.id}
                             onSummarize={
-                              section && !summarizingSectionId && session.status === 'completed'
+                              section && !summarizingSectionId && session.status !== 'generating'
                                 ? () => void handleSummarizeSection(section.id)
                                 : undefined
                             }
@@ -1085,7 +1078,7 @@ export function SessionPage() {
                             summary={section?.summary}
                             isLoading={summarizingSectionId === section?.id}
                             onSummarize={
-                              section && !summarizingSectionId && session.status === 'completed'
+                              section && !summarizingSectionId && session.status !== 'generating'
                                 ? () => void handleSummarizeSection(section.id)
                                 : undefined
                             }
