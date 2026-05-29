@@ -14,6 +14,7 @@ const resources = {
         backHome: 'Back to home',
         retry: 'Retry generation',
         deleteSession: 'Delete session',
+        summarizeHeading: 'Summarize',
       },
       home: {
         headline: 'Paste a YouTube URL',
@@ -102,6 +103,7 @@ const resources = {
         backHome: '返回首页',
         retry: '重新生成',
         deleteSession: '删除会话',
+        summarizeHeading: '总结',
       },
       home: {
         headline: '粘贴 YouTube 链接',

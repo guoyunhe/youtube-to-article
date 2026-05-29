@@ -12,6 +12,8 @@ import Typography from '@mui/material/Typography'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { deleteSession, getSession, patchSession } from '../lib/sessionStore'
 import type {
   FetchSubsResponse,
@@ -169,6 +171,47 @@ function parseStreamLine(line: string): GenerateArticleStreamEvent | null {
 
 function deriveTitle(article: string): string {
   return article.split('\n')[0]?.replace(/^#+\s*/, '').trim() || 'Generated article'
+}
+
+function MarkdownHeading({
+  level,
+  children,
+  buttonLabel,
+}: {
+  level: 1 | 2 | 3 | 4 | 5 | 6
+  children: React.ReactNode
+  buttonLabel: string
+}) {
+  const headingTag = {
+    1: 'h1',
+    2: 'h2',
+    3: 'h3',
+    4: 'h4',
+    5: 'h5',
+    6: 'h6',
+  }[level] as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'
+
+  return (
+    <Box
+      component={headingTag}
+      sx={{
+        alignItems: 'center',
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: 1.2,
+        justifyContent: 'space-between',
+        lineHeight: 1.2,
+        my: level === 1 ? 0 : 1.5,
+      }}
+    >
+      <Typography component="span" sx={{ fontSize: 'inherit', fontWeight: 700 }}>
+        {children}
+      </Typography>
+      <Button disabled size="small" variant="outlined">
+        {buttonLabel}
+      </Button>
+    </Box>
+  )
 }
 
 async function requestGeneration(
@@ -731,9 +774,104 @@ export function SessionPage() {
               </Box>
 
               {session.article ? (
-                <Typography component="article" sx={{ fontSize: 14, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
-                  {session.article}
-                </Typography>
+                <Box
+                  component="article"
+                  sx={{
+                    fontSize: 14,
+                    lineHeight: 1.8,
+                    '& > :first-of-type': {
+                      mt: 0,
+                    },
+                    '& > :last-child': {
+                      mb: 0,
+                    },
+                    '& p, & ul, & ol, & blockquote, & pre, & table': {
+                      my: 1.5,
+                    },
+                    '& ul, & ol': {
+                      pl: 3,
+                    },
+                    '& li + li': {
+                      mt: 0.75,
+                    },
+                    '& blockquote': {
+                      borderLeft: '4px solid',
+                      borderColor: 'divider',
+                      color: 'text.secondary',
+                      pl: 2,
+                    },
+                    '& pre': {
+                      overflowX: 'auto',
+                      p: 2,
+                      borderRadius: 2,
+                      backgroundColor: 'background.default',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                    },
+                    '& code': {
+                      fontFamily:
+                        'ui-monospace, SFMono-Regular, SF Mono, Consolas, Liberation Mono, monospace',
+                      fontSize: '0.95em',
+                    },
+                    '& a': {
+                      color: 'primary.main',
+                    },
+                    '& table': {
+                      borderCollapse: 'collapse',
+                      width: '100%',
+                    },
+                    '& th, & td': {
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      px: 1.25,
+                      py: 0.75,
+                      textAlign: 'left',
+                      verticalAlign: 'top',
+                    },
+                    '& th': {
+                      backgroundColor: 'background.default',
+                      fontWeight: 600,
+                    },
+                  }}
+                >
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      h1: ({ children }) => (
+                        <MarkdownHeading level={1} buttonLabel={t('actions.summarizeHeading')}>
+                          {children}
+                        </MarkdownHeading>
+                      ),
+                      h2: ({ children }) => (
+                        <MarkdownHeading level={2} buttonLabel={t('actions.summarizeHeading')}>
+                          {children}
+                        </MarkdownHeading>
+                      ),
+                      h3: ({ children }) => (
+                        <MarkdownHeading level={3} buttonLabel={t('actions.summarizeHeading')}>
+                          {children}
+                        </MarkdownHeading>
+                      ),
+                      h4: ({ children }) => (
+                        <MarkdownHeading level={4} buttonLabel={t('actions.summarizeHeading')}>
+                          {children}
+                        </MarkdownHeading>
+                      ),
+                      h5: ({ children }) => (
+                        <MarkdownHeading level={5} buttonLabel={t('actions.summarizeHeading')}>
+                          {children}
+                        </MarkdownHeading>
+                      ),
+                      h6: ({ children }) => (
+                        <MarkdownHeading level={6} buttonLabel={t('actions.summarizeHeading')}>
+                          {children}
+                        </MarkdownHeading>
+                      ),
+                    }}
+                  >
+                    {session.article}
+                  </ReactMarkdown>
+                </Box>
               ) : (
                 <Typography sx={{ color: 'text.secondary', fontSize: 14 }}>
                   {t('session.articleEmpty')}
