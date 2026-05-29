@@ -22,7 +22,7 @@ const resources = {
         urlLabel: 'YouTube URL',
         urlPlaceholder: 'https://www.youtube.com/watch?v=...',
         customPromptPlaceholder: 'Optional: add extra instructions, tone preferences, structure requirements, or constraints.',
-        recentSessions: 'Recent local sessions',
+        recentSessions: 'Recent sessions',
         noSessions: 'No local sessions yet. Generated sessions will be stored in IndexedDB.',
       },
       session: {
@@ -109,7 +109,7 @@ const resources = {
         urlLabel: 'YouTube 链接',
         urlPlaceholder: 'https://www.youtube.com/watch?v=...',
         customPromptPlaceholder: '可选：补充额外要求，例如语气、结构、重点和限制条件。',
-        recentSessions: '本地历史会话',
+        recentSessions: '历史会话',
         noSessions: '暂时没有本地历史。生成后的会话会保存到 IndexedDB。',
       },
       session: {
