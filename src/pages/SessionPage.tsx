@@ -16,7 +16,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { deleteSession, getSession, patchSession } from '../lib/sessionStore'
 import type {
-  FetchSubsResponse,
+  FetchCaptionsResponse,
   GenerateArticleResponse,
   SessionRecord,
 } from '../types'
@@ -122,7 +122,7 @@ async function parseApiResponse<T>(response: Response, endpoint: string): Promis
 }
 
 async function postJson<T>(
-  endpoint: '/api/fetchSubs',
+  endpoint: '/api/fetchCaptions',
   body: unknown,
 ): Promise<T> {
   console.info(`[api] request ${endpoint}`, body)
@@ -217,12 +217,12 @@ function MarkdownHeading({
 async function requestGeneration(
   session: SessionRecord,
   onStageChange: (stage: GenerationStage) => void,
-  onSubsFetched: (subs: FetchSubsResponse) => Promise<void>,
+  onSubsFetched: (subs: FetchCaptionsResponse) => Promise<void>,
   onDelta: (article: string) => void,
   startFromStage: GenerationStage,
-  cachedSubs: FetchSubsResponse | null,
+  cachedSubs: FetchCaptionsResponse | null,
 ): Promise<GenerateArticleResponse> {
-  let subs: FetchSubsResponse
+  let subs: FetchCaptionsResponse
 
   if (startFromStage === 'generatingArticle' && cachedSubs) {
     subs = cachedSubs
@@ -230,7 +230,7 @@ async function requestGeneration(
     onStageChange('fetchingSubs')
 
     try {
-      subs = await postJson<FetchSubsResponse>('/api/fetchSubs', {
+      subs = await postJson<FetchCaptionsResponse>('/api/fetchCaptions', {
         youtubeUrl: session.youtubeUrl,
       })
       await onSubsFetched(subs)
@@ -338,7 +338,7 @@ export function SessionPage() {
   const [generationStage, setGenerationStage] = useState<GenerationStage>('fetchingSubs')
   const [stageErrors, setStageErrors] = useState<StageErrorMap>({})
   const [nowMs, setNowMs] = useState<number>(() => Date.now())
-  const lastFetchedSubs = useRef<FetchSubsResponse | null>(null)
+  const lastFetchedSubs = useRef<FetchCaptionsResponse | null>(null)
   const autostarted = useRef(false)
 
   useEffect(() => {

@@ -176,7 +176,7 @@ async function fetchTranscript(videoId: string): Promise<{
   }
 }
 
-export async function fetchSubs(youtubeUrl: string) {
+export async function fetchCaptions(youtubeUrl: string) {
   const videoId = extractVideoId(youtubeUrl)
 
   if (!videoId) {

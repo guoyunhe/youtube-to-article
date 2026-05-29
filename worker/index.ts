@@ -1,4 +1,4 @@
-import { handleFetchSubs } from './handlers/fetchSubs'
+import { handleFetchCaptions } from './handlers/fetchCaptions'
 import { handleGenerateArticle } from './handlers/generateArticle'
 import {
   handleCreateSession,
@@ -16,8 +16,8 @@ export default {
     const url = new URL(request.url)
     const sessionMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)$/)
 
-    if (url.pathname === '/api/fetchSubs' && request.method === 'POST') {
-      return handleFetchSubs(request)
+    if (url.pathname === '/api/fetchCaptions' && request.method === 'POST') {
+      return handleFetchCaptions(request)
     }
 
     if (url.pathname === '/api/generateArticle' && request.method === 'POST') {

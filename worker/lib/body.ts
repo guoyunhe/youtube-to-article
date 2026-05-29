@@ -1,5 +1,5 @@
 import type {
-  FetchSubsRequestBody,
+  FetchCaptionsRequestBody,
   GenerateArticleRequestBody,
   GenerationOptions,
 } from '../types'
@@ -32,8 +32,8 @@ function parseOptions(options: unknown): GenerationOptions {
   }
 }
 
-export async function parseFetchSubsRequest(request: Request): Promise<FetchSubsRequestBody> {
-  const body = await parseJsonBody<Partial<FetchSubsRequestBody>>(request)
+export async function parseFetchCaptionsRequest(request: Request): Promise<FetchCaptionsRequestBody> {
+  const body = await parseJsonBody<Partial<FetchCaptionsRequestBody>>(request)
 
   if (!body.youtubeUrl || typeof body.youtubeUrl !== 'string') {
     throw new Error('A valid YouTube URL is required.')

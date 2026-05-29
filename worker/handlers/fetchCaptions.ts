@@ -1,20 +1,20 @@
-import { parseFetchSubsRequest } from '../lib/body'
+import { parseFetchCaptionsRequest } from '../lib/body'
 import { buildTraceHeaders, classifyGenerationError, json } from '../lib/http'
-import { fetchSubs } from '../lib/youtube'
+import { fetchCaptions } from '../lib/youtube'
 
-export async function handleFetchSubs(request: Request): Promise<Response> {
+export async function handleFetchCaptions(request: Request): Promise<Response> {
   const requestId = crypto.randomUUID()
-  let stage = 'parseFetchSubsRequest'
+  let stage = 'parseFetchCaptionsRequest'
 
-  console.log(`[fetchSubs:${requestId}] start`)
+  console.log(`[fetchCaptions:${requestId}] start`)
 
   try {
-    const body = await parseFetchSubsRequest(request)
+    const body = await parseFetchCaptionsRequest(request)
     stage = 'extractVideoId'
     stage = 'fetchTranscript'
-    const result = await fetchSubs(body.youtubeUrl)
+    const result = await fetchCaptions(body.youtubeUrl)
 
-    console.log(`[fetchSubs:${requestId}] success`)
+    console.log(`[fetchCaptions:${requestId}] success`)
 
     return json(result, {
       headers: buildTraceHeaders(requestId),
@@ -22,7 +22,7 @@ export async function handleFetchSubs(request: Request): Promise<Response> {
   } catch (error) {
     const classified = classifyGenerationError(error)
 
-    console.error(`[fetchSubs:${requestId}] failed at ${stage}`, {
+    console.error(`[fetchCaptions:${requestId}] failed at ${stage}`, {
       status: classified.status,
       message: classified.message,
     })

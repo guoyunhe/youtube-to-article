@@ -50,7 +50,7 @@ export interface SessionRecord {
   error?: string
 }
 
-export interface FetchSubsRequestBody {
+export interface FetchCaptionsRequestBody {
   youtubeUrl: string
 }
 

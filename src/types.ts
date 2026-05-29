@@ -48,7 +48,7 @@ export interface GenerateArticleResponse {
   videoId: string
 }
 
-export interface FetchSubsResponse {
+export interface FetchCaptionsResponse {
   transcript: string
   transcriptPreview: string
   captions: CaptionSegment[]

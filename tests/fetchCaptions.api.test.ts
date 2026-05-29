@@ -5,9 +5,9 @@ afterEach(() => {
   cleanupWorkerTestGlobals()
 })
 
-describe('fetchSubs API', () => {
+describe('fetchCaptions API', () => {
   it(
-    'POST /api/fetchSubs returns transcript from YouTube',
+    'POST /api/fetchCaptions returns transcript from YouTube',
     { timeout: 15000 },
     async () => {
       const externalFetch = vi.fn(async (input: RequestInfo | URL) => {
@@ -66,7 +66,7 @@ describe('fetchSubs API', () => {
 
       vi.stubGlobal('fetch', externalFetch)
 
-      const response = await postJson('/api/fetchSubs', {
+      const response = await postJson('/api/fetchCaptions', {
         youtubeUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
       })
 
@@ -99,8 +99,8 @@ describe('fetchSubs API', () => {
     },
   )
 
-  it('POST /api/fetchSubs returns 400 for malformed JSON body', async () => {
-    const response = await postRawJson('/api/fetchSubs', '{"youtubeUrl":')
+  it('POST /api/fetchCaptions returns 400 for malformed JSON body', async () => {
+    const response = await postRawJson('/api/fetchCaptions', '{"youtubeUrl":')
 
     expect(response.status).toBe(400)
 
@@ -111,7 +111,7 @@ describe('fetchSubs API', () => {
     }
 
     expect(payload.error).toBe('Request body must be valid JSON.')
-    expect(payload.stage).toBe('parseFetchSubsRequest')
+    expect(payload.stage).toBe('parseFetchCaptionsRequest')
     expect(payload.requestId.length).toBeGreaterThan(0)
   })
 })
